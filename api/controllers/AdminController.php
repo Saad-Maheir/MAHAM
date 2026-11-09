@@ -142,17 +142,13 @@ class AdminController {
         $pdo->beginTransaction();
 
         try {
-            // Lock transaction record
-            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id FOR UPDATE");
+            // Lock pending transaction record exclusively
+            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id AND status = 'pending' FOR UPDATE");
             $txStmt->execute(['id' => $txId]);
             $tx = $txStmt->fetch();
 
             if (!$tx) {
-                throw new RuntimeException("المعاملة غير موجودة.");
-            }
-
-            if ($tx['status'] !== 'pending') {
-                throw new RuntimeException("تمت معالجة هذه المعاملة مسبقاً (الحالة الحالية: {$tx['status']}).");
+                throw new RuntimeException("المعاملة غير موجودة أو تمت معالجتها واعتمادها مسبقاً.");
             }
 
             $amount = (float)$tx['amount'];
@@ -303,12 +299,12 @@ class AdminController {
         $pdo->beginTransaction();
 
         try {
-            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id FOR UPDATE");
+            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id AND status = 'pending' FOR UPDATE");
             $txStmt->execute(['id' => $txId]);
             $tx = $txStmt->fetch();
 
-            if (!$tx || $tx['status'] !== 'pending') {
-                throw new RuntimeException("طلب السحب غير صالح أو تمت معالجته مسبقاً.");
+            if (!$tx) {
+                throw new RuntimeException("طلب السحب غير صالح أو تمت معالجته وصرفه مسبقاً.");
             }
 
             $amount = (float)$tx['amount'];
@@ -369,12 +365,12 @@ class AdminController {
         $pdo->beginTransaction();
 
         try {
-            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id FOR UPDATE");
+            $txStmt = $pdo->prepare("SELECT id, user_id, amount, status FROM transactions WHERE id = :id AND status = 'pending' FOR UPDATE");
             $txStmt->execute(['id' => $txId]);
             $tx = $txStmt->fetch();
 
-            if (!$tx || $tx['status'] !== 'pending') {
-                throw new RuntimeException("طلب السحب غير صالح أو تمت معالجته مسبقاً.");
+            if (!$tx) {
+                throw new RuntimeException("طلب السحب غير صالح أو تمت معالجته وصرفه مسبقاً.");
             }
 
             $amount = (float)$tx['amount'];

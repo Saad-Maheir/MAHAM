@@ -1,0 +1,20 @@
+# -----------------------------------------------------------------------------
+# MAHAM Security Directive: Block All Script Execution in Uploads Directory
+# -----------------------------------------------------------------------------
+
+# Disable script execution engines if supported
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Strictly deny direct access to any executable script or markup file
+<FilesMatch "(?i)\.(php|php3|php4|php5|php7|php8|phtml|phar|pl|py|jsp|asp|aspx|htm|html|shtml|sh|cgi|bash|env|htaccess)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing and CGI execution
+Options -Indexes -ExecCGI
