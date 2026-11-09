@@ -1,0 +1,16 @@
+# MAHAM FinTech Platform - API Directory Configuration
+Options -Indexes
+Options +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?endpoint=$1 [QSA,L]
+</IfModule>
+
+# Protect sensitive system and config files
+<FilesMatch "^\.|\.(env|ini|log|sh|sql)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>

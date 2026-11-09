@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>مهام | MAHAM - منصة إنجاز المهام ومضاعفة الأرباح</title>
+    
+    <!-- PWA & Mobile Meta Tags -->
+    <meta name="theme-color" content="#090e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="مهام | MAHAM">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%2310b981'/><stop offset='100%' stop-color='%23059669'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='%230f172a'/><circle cx='50' cy='50' r='38' fill='none' stroke='url(%23g)' stroke-width='4'/><path d='M35 50L45 60L65 38' fill='none' stroke='%2310b981' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+
+    <!-- Tailwind CSS (CDN for rapid styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            450: '#10b981',
+                            950: '#022c22'
+                        },
+                        slate: {
+                            850: '#121a2b',
+                            925: '#0b111e',
+                            950: '#070b14'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body class="bg-[#090e1a] text-slate-100 min-h-screen selection:bg-emerald-500/30 selection:text-emerald-300">
+
+    <!-- Ambient Glowing Backdrops -->
+    <div class="ambient-glow-emerald"></div>
+    <div class="ambient-glow-crimson"></div>
+
+    <!-- ========================================================================= -->
+    <!-- CINEMATIC MULTI-STAGE SPLASH SCREEN -->
+    <!-- ========================================================================= -->
+    <div id="splash-screen">
+        <div class="flex flex-col items-center justify-center p-6 text-center max-w-sm">
+            <!-- Stage 1: Scale-in Emblem with Glow -->
+            <div class="splash-emblem w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-2xl mb-6 relative">
+                <div class="w-full h-full bg-[#090e1a] rounded-[22px] flex items-center justify-center">
+                    <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Stage 2: Staggered Typography Reveal -->
+            <div class="splash-text-reveal">
+                <h1 class="text-3xl font-black text-white tracking-wider mb-2 font-mono">مهام | MAHAM</h1>
+                <p class="text-xs text-slate-400 font-medium leading-relaxed">
+                    منصتك الذكية لإنجاز المهام اليومية ومضاعفة الأرباح
+                </p>
+                <div class="mt-8 flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-[11px] text-emerald-400/80 font-mono">جاري تحميل البيئة الآمنة...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MAIN APPLICATION WRAPPER -->
+    <!-- ========================================================================= -->
+    <div id="app" class="relative z-10 flex min-h-screen pb-24 md:pb-6">
+
+        <!-- --------------------------------------------------------------------- -->
+        <!-- DESKTOP STICKY RTL SIDEBAR (>= 768px) -->
+        <!-- --------------------------------------------------------------------- -->
+        <aside class="hidden md:flex flex-col w-64 lg:w-72 bg-[#0b111e]/80 backdrop-blur-2xl border-l border-slate-800/80 p-5 shrink-0 fixed top-0 bottom-0 right-0 z-30">
+            <!-- Brand Header -->
+            <div class="flex items-center gap-3 pb-6 border-b border-slate-800/80">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-lg shadow-emerald-950/50 shrink-0">
+                    <div class="w-full h-full bg-[#090e1a] rounded-[14px] flex items-center justify-center">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-white tracking-wide font-mono">مهام | MAHAM</h2>
+                    <span class="text-[10px] text-emerald-400 font-semibold block uppercase tracking-wider">منصة المهام المالية</span>
+                </div>
+            </div>
+
+            <!-- User Quick Wallet Card (Sidebar) -->
+            <div class="auth-user-pill my-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 relative overflow-hidden">
+                <div class="text-xs text-slate-400 mb-1 flex items-center justify-between">
+                    <span>الرصيد المتاح</span>
+                    <span class="current-user-tier-badge text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                        المجانية
+                    </span>
+                </div>
+                <div class="current-user-balance-nav text-2xl font-black text-emerald-400 font-mono tracking-tight">
+                    0 د.ع
+                </div>
+                <div class="current-user-name text-xs text-slate-300 font-semibold mt-2 truncate">
+                    مستخدم جديد
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5 flex-1">
+                <button id="desk-nav-home" onclick="App.navigate('home')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold border border-transparent transition text-right">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span>الرئيسية والمهام</span>
+                </button>
+
+                <button id="desk-nav-wallet" onclick="App.navigate('wallet')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold border border-transparent transition text-right">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <span>المحفظة والسحب</span>
+                </button>
+
+                <button id="desk-nav-vip" onclick="App.navigate('vip')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold border border-transparent transition text-right">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
+                    <span>باقات VIP الاستثمارية</span>
+                </button>
+
+                <button id="desk-nav-profile" onclick="App.navigate('profile')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold border border-transparent transition text-right">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span>حسابي والأمان</span>
+                </button>
+            </nav>
+
+            <!-- Bottom Support & Logout -->
+            <div class="pt-4 border-t border-slate-800/80 space-y-2">
+                <a href="https://t.me" target="_blank" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-sky-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.19-.08-.05-.19-.02-.27 0-.12.03-1.99 1.27-5.63 3.73-.53.37-1.02.55-1.45.54-.48-.01-1.4-.27-2.09-.49-.84-.27-1.51-.42-1.45-.89.03-.25.38-.5 1.07-.77 4.2-1.83 7.01-3.04 8.42-3.64 4.01-1.7 4.84-2 5.39-2.01.12 0 .39.03.56.17.15.12.19.28.21.45-.02.09-.02.26-.04.42z"/>
+                        </svg>
+                        قناة الدعم والتحديثات
+                    </span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                </a>
+
+                <button onclick="Auth.handleLogout()" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition text-right">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span>تسجيل الخروج</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- --------------------------------------------------------------------- -->
+        <!-- MOBILE TOP BAR (< 768px) -->
+        <!-- --------------------------------------------------------------------- -->
+        <header class="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#090e1a]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 flex items-center justify-center shadow-md">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <span class="text-base font-black text-white font-mono tracking-tight">مهام | MAHAM</span>
+            </div>
+
+            <div class="auth-user-pill flex items-center gap-2">
+                <div class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span class="current-user-balance-nav text-xs font-black text-emerald-400 font-mono">0 د.ع</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- --------------------------------------------------------------------- -->
+        <!-- MAIN CONTENT AREA -->
+        <!-- --------------------------------------------------------------------- -->
+        <main class="flex-1 md:mr-64 lg:mr-72 pt-16 md:pt-6 px-4 md:px-8 max-w-7xl mx-auto w-full">
+
+            <!-- ================================================================= -->
+            <!-- VIEW 1: HOME & 24H TASK ENGINE (#home) -->
+            <!-- ================================================================= -->
+            <section id="view-home" class="space-y-6">
+                <!-- Welcome Banner -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                            <span>لوحة المهام والأرباح</span>
+                            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                                مباشر
+                            </span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">
+                            مرحباً بك، <span class="current-user-name font-bold text-slate-200">المستخدم</span> — نفذ مهامك اليومية واسحب أرباحك فوراً.
+                        </p>
+                    </div>
+
+                    <div id="bento-daily-potential" class="text-xs text-slate-400 bg-slate-900/80 px-3.5 py-2 rounded-xl border border-slate-800">
+                        إجمالي الربح اليومي المتوقع: <span class="font-bold text-emerald-400 font-mono">250 د.ع</span>
+                    </div>
+                </div>
+
+                <!-- 4 Top Bento Metric Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                    <!-- Bento 1: Current Task Profit -->
+                    <div class="glass-panel p-4 lg:p-5 flex flex-col justify-between">
+                        <div class="text-xs text-slate-400 font-semibold mb-2">ربح المهمة الحالية</div>
+                        <div id="bento-task-profit" class="flex items-baseline">
+                            <span class="text-2xl lg:text-3xl font-bold text-white font-mono">250</span>
+                            <span class="currency-iqd text-slate-400 mr-1 font-semibold">د.ع</span>
+                        </div>
+                        <span class="text-[11px] text-emerald-400 mt-2 block font-medium">مكافأة فورية لكل مهمة</span>
+                    </div>
+
+                    <!-- Bento 2: Available Tasks -->
+                    <div class="glass-panel p-4 lg:p-5 flex flex-col justify-between">
+                        <div class="text-xs text-slate-400 font-semibold mb-2">المهام المتبقية</div>
+                        <div id="bento-available-tasks" class="flex items-baseline">
+                            <span class="text-2xl lg:text-3xl font-black text-white font-mono">5</span>
+                            <span class="text-xs text-slate-400 mr-1">مهام</span>
+                        </div>
+                        <span class="text-[11px] text-slate-400 mt-2 block">حصة الباقة الحالية</span>
+                    </div>
+
+                    <!-- Bento 3: Total Balance -->
+                    <div class="glass-panel p-4 lg:p-5 flex flex-col justify-between border-emerald-500/20 bg-emerald-950/10">
+                        <div class="text-xs text-emerald-400/80 font-semibold mb-2">الرصيد الكلي المتاح</div>
+                        <div id="bento-total-balance" class="flex items-baseline">
+                            <span class="text-3xl lg:text-4xl font-extrabold text-emerald-400 font-mono tracking-tight">0</span>
+                            <span class="currency-iqd text-emerald-500/80 mr-1.5 font-bold">د.ع</span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-[11px] text-emerald-400/90 font-medium">جاهز للسحب الفوري</span>
+                            <button onclick="App.navigate('wallet')" class="text-[11px] text-emerald-300 underline font-bold">سحب</button>
+                        </div>
+                    </div>
+
+                    <!-- Bento 4: Active Tier Badge -->
+                    <div class="glass-panel p-4 lg:p-5 flex flex-col justify-between">
+                        <div class="text-xs text-slate-400 font-semibold mb-2">حالة الاشتراك النشط</div>
+                        <div>
+                            <span id="bento-tier-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                الباقة المجانية
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <button onclick="App.navigate('vip')" class="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+                                <span>ترقية إلى VIP</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- The 24-Hour Cooldown Banner (Visible when free tier completed a task) -->
+                <div id="cooldown-banner" class="hidden p-4 lg:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 relative overflow-hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-amber-300">نظام التبريد الزمني نشط (24 ساعة)</h4>
+                                <p class="text-xs text-slate-300 mt-0.5">
+                                    للباقة المجانية، يلزم الانتظار 24 ساعة بين كل مهمة، أو قم بالترقية الفورية إلى باقات VIP لإلغاء التبريد وتنفيذ مهام مفتوحة (∞).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 self-end sm:self-center">
+                            <div class="text-center bg-slate-900/90 px-4 py-2 rounded-xl border border-amber-500/30">
+                                <span class="text-[10px] text-slate-400 block font-semibold">الوقت المتبقي</span>
+                                <span id="cooldown-timer-clock" class="text-lg font-black text-amber-400 font-mono tracking-widest">24:00:00</span>
+                            </div>
+                            <button onclick="App.navigate('vip')" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/20">
+                                إلغاء التبريد والترقية
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Tasks Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">المهام اليومية المعتمدة</h3>
+                            <p class="text-xs text-slate-400">شاهد وتفاعل مع المحتوى لإضافة الأرباح المباشرة لرصيدك</p>
+                        </div>
+                    </div>
+
+                    <!-- Tasks Grid -->
+                    <div id="tasks-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Loaded dynamically via Dashboard.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- VIEW 2: WALLET, DEPOSIT & WITHDRAW (#wallet) -->
+            <!-- ================================================================= -->
+            <section id="view-wallet" class="hidden space-y-6">
+                <!-- Wallet Header -->
+                <div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">المحفظة المالية والعمليات</h2>
+                    <p class="text-xs text-slate-400 mt-1">إيداع وسحب الأرباح عبر وسائل الدفع العراقية المعتمدة (زين كاش، آسيا حوالة، كي كارد)</p>
+                </div>
+
+                <!-- Wallet Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="glass-panel p-5 border-emerald-500/30 bg-emerald-950/15">
+                        <span class="text-xs text-slate-400 block mb-1 font-semibold">الرصيد المتاح للسحب</span>
+                        <div id="wallet-available-balance" class="flex items-baseline">
+                            <span class="text-3xl font-extrabold text-emerald-400 font-mono">0</span>
+                            <span class="currency-iqd text-emerald-500/80 mr-1.5 font-bold">د.ع</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 border-amber-500/30 bg-amber-950/10">
+                        <span class="text-xs text-slate-400 block mb-1 font-semibold">إيداعات قيد المراجعة</span>
+                        <div id="wallet-pending-balance" class="flex items-baseline">
+                            <span class="text-2xl font-bold text-amber-400 font-mono">0</span>
+                            <span class="currency-iqd text-amber-500/80 mr-1 font-semibold">د.ع</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5">
+                        <span class="text-xs text-slate-400 block mb-1 font-semibold">إجمالي السحوبات المكتملة</span>
+                        <div id="wallet-total-withdrawn" class="flex items-baseline">
+                            <span class="text-2xl font-bold text-slate-200 font-mono">0</span>
+                            <span class="currency-iqd text-slate-400 mr-1 font-semibold">د.ع</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Switcher Tabs (Deposit vs Withdraw) -->
+                <div class="glass-panel p-1.5 flex gap-1.5 max-w-md mx-auto">
+                    <button id="wallet-tab-deposit-btn" onclick="Wallet.switchActionTab('deposit')" class="flex-1 py-2.5 rounded-xl text-xs font-bold border transition bg-emerald-500/20 text-emerald-400 border-emerald-500/40">
+                        إيداع رصيد بالمحفظة
+                    </button>
+                    <button id="wallet-tab-withdraw-btn" onclick="Wallet.switchActionTab('withdraw')" class="flex-1 py-2.5 rounded-xl text-xs font-bold border transition text-slate-400 border-transparent">
+                        سحب الأرباح لحسابك
+                    </button>
+                </div>
+
+                <!-- 1. Deposit View Form -->
+                <div id="wallet-deposit-view" class="glass-panel p-6 max-w-2xl mx-auto space-y-6">
+                    <div>
+                        <h3 class="text-base font-black text-white mb-1">إيداع رصيد يدوي معتمد</h3>
+                        <p class="text-xs text-slate-400">اختر طريقة التحويل وانسخ الرقم الرسمي ثم ارفع إشعار التحويل</p>
+                    </div>
+
+                    <!-- Payment Method Selector -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-2">اختر وسيلة الدفع:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" id="method-btn-zain_cash" onclick="Wallet.selectMethod('zain_cash')" class="p-3 rounded-xl border border-emerald-500 bg-emerald-500/15 text-emerald-300 font-bold text-xs flex flex-col items-center gap-1.5 transition">
+                                <span>زين كاش</span>
+                                <span class="text-[10px] text-slate-400 font-normal">ZainCash</span>
+                            </button>
+                            <button type="button" id="method-btn-asia_hawala" onclick="Wallet.selectMethod('asia_hawala')" class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 font-bold text-xs flex flex-col items-center gap-1.5 transition">
+                                <span>آسيا حوالة</span>
+                                <span class="text-[10px] text-slate-400 font-normal">AsiaHawala</span>
+                            </button>
+                            <button type="button" id="method-btn-qi_card" onclick="Wallet.selectMethod('qi_card')" class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 font-bold text-xs flex flex-col items-center gap-1.5 transition">
+                                <span>كي كارد</span>
+                                <span class="text-[10px] text-slate-400 font-normal">Qi / Rafidain</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Official Destination Display with 1-Click Copy -->
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-400">رقم المحفظة / الحساب المعتمد للتحويل:</span>
+                            <span id="official-account-name" class="font-bold text-slate-300">شركة مهام للخدمات المالية</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 pt-1">
+                            <span id="official-account-number" class="text-lg lg:text-xl font-black font-mono text-emerald-400 tracking-wider">
+                                07801234567
+                            </span>
+                            <button type="button" id="copy-account-btn" onclick="Wallet.copyAccountNumber()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                                </svg>
+                                <span>نسخ الرقم</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Deposit Form Inputs -->
+                    <form onsubmit="Wallet.handleDepositSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">المبلغ المحول بالدينار العراقي (د.ع):</label>
+                            <input type="number" id="deposit-amount-input" required min="5000" step="500" placeholder="مثال: 25000" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white font-mono text-sm outline-none transition">
+                            
+                            <!-- Quick Amount Chips -->
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <button type="button" onclick="Wallet.setDepositAmount(10000)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] text-slate-300 hover:bg-slate-700 transition font-mono">+10,000</button>
+                                <button type="button" onclick="Wallet.setDepositAmount(25000)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] text-slate-300 hover:bg-slate-700 transition font-mono">+25,000</button>
+                                <button type="button" onclick="Wallet.setDepositAmount(50000)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] text-slate-300 hover:bg-slate-700 transition font-mono">+50,000</button>
+                                <button type="button" onclick="Wallet.setDepositAmount(100000)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] text-slate-300 hover:bg-slate-700 transition font-mono">+100,000</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم الإشعار أو الحوالة المرجعي:</label>
+                            <input type="text" id="deposit-ref-input" required placeholder="أدخل الرقم المرجعي الظاهر في إيصال التحويل" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-sm outline-none transition font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم المحفظة المحول منها (اختياري):</label>
+                            <input type="text" id="deposit-sender-input" placeholder="07xxxxxxxx" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-sm outline-none transition font-mono">
+                        </div>
+
+                        <!-- Receipt Upload Zone -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">صورة إشعار التحويل المالي (Screenshot):</label>
+                            <div class="relative border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-2xl p-5 text-center transition cursor-pointer bg-slate-900/40">
+                                <input type="file" id="receipt-file-input" required accept="image/*" onchange="Wallet.handleReceiptChange(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                                <div class="space-y-1">
+                                    <svg class="w-8 h-8 mx-auto text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <div class="text-xs text-slate-300 font-bold">اضغط لاختيار صورة الإيصال أو اسحبها هنا</div>
+                                    <div class="text-[11px] text-slate-500 font-mono">JPG, PNG, WEBP (بحد أقصى 5 ميجابايت)</div>
+                                </div>
+                            </div>
+
+                            <!-- Receipt Preview -->
+                            <div id="receipt-preview-container" class="hidden mt-3 p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-3">
+                                <img id="receipt-preview-img" src="" alt="إشعار التحويل" class="w-12 h-12 object-cover rounded-lg border border-slate-700">
+                                <div class="flex-1 truncate">
+                                    <span id="receipt-file-name" class="text-xs text-slate-200 block truncate font-mono"></span>
+                                    <span class="text-[10px] text-emerald-400 font-semibold">تم تجهيز الملف للرفع</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="deposit-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-950/50 transition">
+                            <span>تأكيد طلب الإيداع وإرسال الإشعار</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 2. Withdraw View Form -->
+                <div id="wallet-withdraw-view" class="hidden glass-panel p-6 max-w-2xl mx-auto space-y-6">
+                    <div>
+                        <h3 class="text-base font-black text-white mb-1">طلب سحب الأرباح الفوري</h3>
+                        <p class="text-xs text-slate-400">يتم تدقيق طلبات السحب وتنفيذ التحويل المالي خلال 1 إلى 6 ساعات كحد أقصى</p>
+                    </div>
+
+                    <form onsubmit="Wallet.handleWithdrawSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">مبلغ السحب المطلوب (د.ع):</label>
+                            <input type="number" id="withdraw-amount-input" required min="5000" step="500" placeholder="الحد الأدنى للسحب 5,000 د.ع" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white font-mono text-sm outline-none transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">طريقة استلام الأرباح:</label>
+                            <select id="withdraw-method-select" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-sm outline-none transition">
+                                <option value="zain_cash">زين كاش (ZainCash)</option>
+                                <option value="asia_hawala">آسيا حوالة (AsiaHawala)</option>
+                                <option value="qi_card">كي كارد / مصرف الرافدين (Qi Card)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم المحفظة أو الحساب المصرفي المستلم:</label>
+                            <input type="text" id="withdraw-account-input" required placeholder="رقم الهاتف (07xxxxxxxxx) أو رقم بطاقة كي كارد" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-sm outline-none transition font-mono">
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300 leading-relaxed">
+                            <svg class="w-4 h-4 shrink-0 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>سيتم خصم المبلغ مباشرة من رصيدك المتاح وتعليقه في خانة قيد المراجعة حتى تأكيد التحويل.</span>
+                        </div>
+
+                        <button type="submit" id="withdraw-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-950/50 transition">
+                            <span>تقديم طلب السحب المالي</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Transaction Ledger History Table -->
+                <div class="glass-panel p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-white">سجل العمليات المالية والتحويلات</h3>
+                        <span class="text-xs text-slate-400">آخر 50 عملية</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-800 font-semibold">
+                                    <th class="py-3 px-4">نوع العملية والتاريخ</th>
+                                    <th class="py-3 px-4">وسيلة الدفع والمرجع</th>
+                                    <th class="py-3 px-4 text-left">المبلغ</th>
+                                    <th class="py-3 px-4 text-center">حالة التدقيق</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body">
+                                <!-- Loaded dynamically via Wallet.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- VIEW 3: VIP SUBSCRIPTIONS & PACKAGES (#vip) -->
+            <!-- ================================================================= -->
+            <section id="view-vip" class="hidden space-y-6">
+                <!-- Header -->
+                <div class="text-center max-w-2xl mx-auto space-y-2">
+                    <span class="px-3.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ترقية العضوية الاستثمارية
+                    </span>
+                    <h2 class="text-2xl lg:text-3xl font-black text-white tracking-tight">باقات VIP الاستثمارية ومضاعفة الأرباح</h2>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        اختر الباقة المناسبة لقدرتك الاستثمارية واستمتع بمهام يومية مفتوحة بلا قيود وبدون فترات تبريد (∞)
+                    </p>
+                </div>
+
+                <!-- 5 VIP Packages Grid + Free Tier -->
+                <div id="subscriptions-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Loaded dynamically via Subscriptions.js -->
+                </div>
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- VIEW 4: PROFILE & SECURITY (#profile) -->
+            <!-- ================================================================= -->
+            <section id="view-profile" class="hidden space-y-6 max-w-3xl mx-auto">
+                <div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">حسابي وإعدادات الأمان</h2>
+                    <p class="text-xs text-slate-400 mt-1">بيانات الحساب الشخصي والتوثيق المالي وحالة الأمان</p>
+                </div>
+
+                <!-- Profile Header Card -->
+                <div class="glass-panel p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-right">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-xl shrink-0">
+                        <div class="w-full h-full bg-[#090e1a] rounded-[14px] flex items-center justify-center">
+                            <span class="text-2xl font-black text-emerald-400 font-mono">VIP</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <h3 class="current-user-name text-xl font-bold text-white">المستخدم</h3>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-center sm:self-auto">
+                                <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                موثق برقم هاتف عراقي
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-400 font-mono current-user-email">email@example.com</div>
+                        <div class="text-xs text-slate-400 font-mono current-user-phone">07xxxxxxxx</div>
+                    </div>
+                </div>
+
+                <!-- Account Statistics -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel p-4 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">الرصيد الكلي</span>
+                        <span id="prof-stat-balance" class="text-lg font-bold text-emerald-400 font-mono">0 د.ع</span>
+                    </div>
+                    <div class="glass-panel p-4 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">المهام المنجزة</span>
+                        <span id="prof-stat-completed" class="text-lg font-bold text-white font-mono">0 مهمة</span>
+                    </div>
+                    <div class="glass-panel p-4 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">الباقة النشطة</span>
+                        <span id="prof-stat-tier" class="text-sm font-bold text-amber-400">الباقة المجانية</span>
+                    </div>
+                </div>
+
+                <!-- Security & Official Support Links -->
+                <div class="glass-panel p-5 space-y-3">
+                    <h4 class="text-sm font-bold text-white mb-2">الدعم الفني والخدمات المعتمدة</h4>
+                    <a href="https://t.me" target="_blank" class="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 transition text-xs text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                            مجتمع مستثمري مهام الرسمي على تليجرام
+                        </span>
+                        <span class="text-sky-400 font-bold">انضمام</span>
+                    </a>
+                    <a href="mailto:support@maham-iq.com" class="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 transition text-xs text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            البريد المباشر للعمليات المالية: support@maham-iq.com
+                        </span>
+                        <span class="text-slate-400 font-bold">مراسلة</span>
+                    </a>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="Auth.handleLogout()" class="w-full py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>تسجيل الخروج من الحساب</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- --------------------------------------------------------------------- -->
+        <!-- MOBILE FLOATING BOTTOM NAVIGATION BAR (< 768px) -->
+        <!-- --------------------------------------------------------------------- -->
+        <nav class="md:hidden mobile-bottom-nav">
+            <div class="grid grid-cols-4 items-center py-2 px-1 text-center">
+                <button id="mob-nav-home" onclick="App.navigate('home')" class="nav-tab-btn active text-emerald-400 flex flex-col items-center py-1">
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span class="text-[11px] font-bold">الرئيسية</span>
+                    <span class="nav-indicator"></span>
+                </button>
+
+                <button id="mob-nav-wallet" onclick="App.navigate('wallet')" class="nav-tab-btn text-slate-400 flex flex-col items-center py-1">
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <span class="text-[11px] font-bold">المحفظة</span>
+                    <span class="nav-indicator"></span>
+                </button>
+
+                <button id="mob-nav-vip" onclick="App.navigate('vip')" class="nav-tab-btn text-slate-400 flex flex-col items-center py-1">
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
+                    <span class="text-[11px] font-bold">الاشتراكات</span>
+                    <span class="nav-indicator"></span>
+                </button>
+
+                <button id="mob-nav-profile" onclick="App.navigate('profile')" class="nav-tab-btn text-slate-400 flex flex-col items-center py-1">
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span class="text-[11px] font-bold">حسابي</span>
+                    <span class="nav-indicator"></span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 1: AUTHENTICATION (LOGIN & REGISTRATION) -->
+    <!-- ========================================================================= -->
+    <div id="auth-modal" class="hidden fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-2xl items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel p-6 sm:p-8 max-w-md w-full my-8 space-y-6 shadow-2xl relative border-emerald-500/20">
+            <!-- Header Brand -->
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-xl shadow-emerald-950/50">
+                    <div class="w-full h-full bg-[#090e1a] rounded-[14px] flex items-center justify-center">
+                        <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-xl font-black text-white font-mono tracking-wider">مهام | MAHAM</h3>
+                <p class="text-xs text-slate-400">سجل دخولك أو أنشئ حساباً جديداً لبدء المهام اليومية</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <button type="button" id="tab-btn-login" onclick="Auth.switchTab('login')" class="flex-1 py-2 rounded-lg text-xs font-bold transition bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                    تسجيل الدخول
+                </button>
+                <button type="button" id="tab-btn-register" onclick="Auth.switchTab('register')" class="flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 border border-transparent">
+                    إنشاء حساب جديد
+                </button>
+            </div>
+
+            <!-- 1. Login Form -->
+            <form id="auth-login-form" onsubmit="Auth.handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">البريد الإلكتروني أو رقم الهاتف:</label>
+                    <input type="text" id="login-identifier" required placeholder="example@email.com أو 07801234567" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة المرور:</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition font-mono pr-10">
+                        <button type="button" onclick="Auth.togglePasswordVisibility('login-password', 'eye-login-icon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <svg id="eye-login-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="login-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-950/50 transition">
+                    <span>تسجيل الدخول للمحفظة</span>
+                </button>
+            </form>
+
+            <!-- 2. Register Form -->
+            <form id="auth-register-form" onsubmit="Auth.handleRegister(event)" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">الاسم الثلاثي الكامل:</label>
+                    <input type="text" id="reg-name" required placeholder="سعد ماهر سعد" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">البريد الإلكتروني:</label>
+                    <input type="email" id="reg-email" required placeholder="saad@example.com" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم الهاتف العراقي:</label>
+                    <input type="tel" id="reg-phone" required placeholder="07801234567" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة المرور (8 خانات على الأقل):</label>
+                    <div class="relative">
+                        <input type="password" id="reg-password" required minlength="8" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white text-xs outline-none transition font-mono pr-10">
+                        <button type="button" onclick="Auth.togglePasswordVisibility('reg-password', 'eye-reg-icon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <svg id="eye-reg-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="register-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-950/50 transition">
+                    <span>إنشاء الحساب وبدء الأرباح</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 2: 6-DIGIT OTP VERIFICATION -->
+    <!-- ========================================================================= -->
+    <div id="otp-modal" class="hidden fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-2xl items-center justify-center p-4">
+        <div class="glass-panel p-6 sm:p-8 max-w-sm w-full space-y-6 text-center shadow-2xl border-emerald-500/30">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-black text-white">تأكيد رمز التحقق (OTP)</h3>
+                <p class="text-xs text-slate-400 mt-1">
+                    أدخل الرمز المكون من 6 أرقام المرسل إلى:
+                    <span id="otp-target-email" class="block font-bold text-emerald-400 font-mono mt-0.5"></span>
+                </p>
+                <div id="otp-debug-notice" class="hidden"></div>
+            </div>
+
+            <!-- 6 Digit Inputs -->
+            <div class="flex justify-center gap-2" dir="ltr">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+                <input type="text" maxlength="1" class="otp-digit-input w-11 h-13 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-400 text-center text-xl font-bold font-mono text-white outline-none">
+            </div>
+
+            <button type="button" id="otp-verify-btn" onclick="Auth.handleVerifyOtp()" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm shadow-xl shadow-emerald-950/50 transition">
+                <span>تأكيد الحساب ومتابعة الدخول</span>
+            </button>
+
+            <div class="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+                <span>لم يصلك الرمز؟</span>
+                <button type="button" id="otp-resend-btn" onclick="Auth.handleResendOtp()" class="text-emerald-400 font-bold hover:underline">
+                    إعادة الإرسال
+                </button>
+                <span id="otp-timer-text" class="text-slate-500 font-mono text-[11px]"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 3: ANTI-CHEAT 30-SECOND TASK EXECUTION MODAL -->
+    <!-- ========================================================================= -->
+    <div id="task-execution-modal" class="hidden fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-2xl items-center justify-center p-4">
+        <div class="glass-panel p-6 sm:p-8 max-w-md w-full space-y-6 text-center shadow-2xl border-emerald-500/30 relative">
+            <button onclick="Dashboard.closeTaskModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    نظام التحقق ومكافحة الاحتيال
+                </span>
+                <h3 id="task-exec-title" class="text-lg font-black text-white mt-3">عنوان المهمة</h3>
+                <p class="text-xs text-slate-400 mt-1">
+                    تم فتح رابط المهمة في نافذة جديدة. يرجى إتمام التفاعل والانتظار حتى اكتمال عداد الأمان.
+                </p>
+            </div>
+
+            <!-- Circular SVG Timer -->
+            <div class="relative w-36 h-36 mx-auto flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90">
+                    <circle cx="72" cy="72" r="45" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                    <circle id="task-timer-circle" class="progress-ring__circle" cx="72" cy="72" r="45" stroke="#10b981" stroke-width="8" stroke-linecap="round" fill="transparent"/>
+                </svg>
+                <div class="absolute flex flex-col items-center">
+                    <span id="task-timer-number" class="text-3xl font-black text-white font-mono">30</span>
+                    <span class="text-[10px] text-slate-400 font-bold">ثانية</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <a id="task-target-link" href="#" target="_blank" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    <span>إعادة فتح رابط المهمة للتفاعل</span>
+                </a>
+
+                <!-- Claim Reward Button (Locked until timer finishes) -->
+                <button type="button" id="task-claim-btn" disabled onclick="Dashboard.handleClaimReward()" class="w-full py-3.5 px-6 rounded-xl bg-slate-800 text-slate-500 font-black text-sm flex items-center justify-center gap-2 transition cursor-not-allowed">
+                    <svg class="w-4 h-4 text-amber-400 animate-pulse ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span>جاري التحقق الأمني من إتمام المهمة...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 4: SUBSCRIPTION CONFIRMATION (SUFFICIENT BALANCE) -->
+    <!-- ========================================================================= -->
+    <div id="sub-confirm-modal" class="hidden fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-2xl items-center justify-center p-4">
+        <div class="glass-panel p-6 max-w-sm w-full space-y-5 text-center shadow-2xl border-emerald-500/30">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-black text-white">تأكيد الاشتراك في الباقة</h3>
+                <p id="sub-modal-pkg-name" class="text-sm font-bold text-amber-400 mt-1"></p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2 text-right">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">سعر الباقة المطلوب:</span>
+                    <span id="sub-modal-pkg-price" class="font-bold text-white font-mono"></span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">رصيدك الحالي بالمحفظة:</span>
+                    <span id="sub-modal-current-balance" class="font-bold text-emerald-400 font-mono"></span>
+                </div>
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <span class="text-slate-400">الرصيد المتبقي بعد الخصم:</span>
+                    <span id="sub-modal-remaining-balance" class="font-bold text-slate-200 font-mono"></span>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" id="sub-confirm-submit-btn" onclick="Subscriptions.executeSubscription()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 transition">
+                    <span>تأكيد الاشتراك وخصم الرصيد</span>
+                </button>
+                <button type="button" onclick="Subscriptions.closeConfirmModal()" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 5: INSUFFICIENT BALANCE HANDOFF TO DEPOSIT -->
+    <!-- ========================================================================= -->
+    <div id="sub-insufficient-modal" class="hidden fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-2xl items-center justify-center p-4">
+        <div class="glass-panel p-6 max-w-sm w-full space-y-5 text-center shadow-2xl border-amber-500/30">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-black text-white">الرصيد المتاح غير كافٍ</h3>
+                <p class="text-xs text-slate-400 mt-1">
+                    أنت بحاجة إلى شحن محفظتك بالمبلغ الناقص لتفعيل:
+                    <span id="sub-ins-pkg-name" class="block font-bold text-amber-400 mt-0.5"></span>
+                </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2 text-right">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">سعر الباقة:</span>
+                    <span id="sub-ins-pkg-price" class="font-bold text-white font-mono"></span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">رصيدك الحالي:</span>
+                    <span id="sub-ins-current-balance" class="font-bold text-slate-300 font-mono"></span>
+                </div>
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <span class="text-amber-400 font-bold">المبلغ المطلوب إيداعه:</span>
+                    <span id="sub-ins-missing-amount" class="font-bold text-amber-400 font-mono text-sm"></span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <button type="button" id="sub-ins-deposit-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition">
+                    إيداع المبلغ الناقص الآن في المحفظة
+                </button>
+                <button type="button" onclick="Subscriptions.closeInsufficientModal()" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-semibold">
+                    إلغاء والعودة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- UNIFIED TOAST NOTIFICATION CONTAINER -->
+    <!-- ========================================================================= -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Application JavaScript Modules -->
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/wallet.js"></script>
+    <script src="assets/js/subscriptions.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

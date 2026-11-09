@@ -1,0 +1,243 @@
+/**
+ * MAHAM FinTech Platform - Custom Stylesheet
+ * High-Trust Glassmorphism, Cinematic Splash Animations & Iraqi FinTech Palette
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap');
+
+:root {
+    --font-primary: 'Cairo', 'Tajawal', sans-serif;
+    --color-bg: #090e1a;
+    --color-surface: rgba(18, 26, 43, 0.75);
+    --color-surface-hover: rgba(30, 41, 59, 0.85);
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-hover: rgba(255, 255, 255, 0.16);
+    --color-emerald: #10b981;
+    --color-emerald-glow: rgba(16, 185, 129, 0.25);
+    --color-crimson: #e11d48;
+    --color-crimson-glow: rgba(225, 29, 72, 0.25);
+    --color-gold: #f59e0b;
+}
+
+* {
+    font-family: var(--font-primary);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: #f1f5f9;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #090e1a;
+}
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* Glassmorphism Surface Classes */
+.glass-panel {
+    background: var(--color-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border);
+    border-radius: 1.25rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+    border-color: var(--color-border-hover);
+}
+
+.glass-card-interactive {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Ambient Radial Background Glows */
+.ambient-glow-emerald {
+    position: fixed;
+    top: -150px;
+    right: -100px;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ambient-glow-crimson {
+    position: fixed;
+    bottom: -150px;
+    left: -100px;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(225, 29, 72, 0.10) 0%, rgba(225, 29, 72, 0) 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Cinematic Splash Screen Keyframes & Styles */
+#splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #070b14;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+}
+
+#splash-screen.splash-exit {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-emblem {
+    animation: emblemPulse 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes emblemPulse {
+    0% {
+        transform: scale(0.96);
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+    }
+    100% {
+        transform: scale(1.04);
+        box-shadow: 0 0 50px rgba(16, 185, 129, 0.45), 0 0 80px rgba(225, 29, 72, 0.25);
+    }
+}
+
+.splash-text-reveal {
+    animation: textFadeInUp 1s ease-out forwards;
+}
+
+@keyframes textFadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Floating Bottom Navigation Bar (Mobile) */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 40;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+}
+
+.nav-tab-btn {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-tab-btn.active {
+    color: #10b981;
+}
+
+.nav-tab-btn.active .nav-indicator {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+.nav-indicator {
+    position: absolute;
+    bottom: -4px;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: #10b981;
+    border-radius: 9999px;
+    box-shadow: 0 0 12px #10b981;
+    opacity: 0;
+    transform: scaleX(0);
+    transition: all 0.25s ease;
+}
+
+/* Circular Timer Progress Ring */
+.progress-ring__circle {
+    transition: stroke-dashoffset 0.35s linear;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+/* Financial Number Typography */
+.currency-iqd {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-right: 0.25rem;
+}
+
+/* Custom Notification Toast */
+.toast-container {
+    position: fixed;
+    top: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 90%;
+    max-width: 420px;
+    pointer-events: none;
+}
+
+.toast-item {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    border-radius: 1rem;
+    padding: 0.875rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    animation: toastSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

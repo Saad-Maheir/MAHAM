@@ -1,0 +1,20 @@
+# Environment Credentials & Secrets
+.env
+.env.local
+.env.production
+
+# Uploaded Files & Receipts (Keep directory structure intact)
+uploads/receipts/*
+!uploads/receipts/.gitkeep
+!uploads/receipts/.htaccess
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Dependency directories (if extended with Composer/NPM)
+vendor/
+node_modules/
