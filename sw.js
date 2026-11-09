@@ -3,7 +3,7 @@
  * Offline-resilient cache management for fast mobile rendering
  */
 
-const CACHE_NAME = 'maham-v1.0.0';
+const CACHE_NAME = 'maham-v2.2.0';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -26,10 +26,15 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+    // Purge all legacy caches immediately
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
-                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) {
+                        return caches.delete(key);
+                    }
+                })
             );
         }).then(() => self.clients.claim())
     );
@@ -44,19 +49,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Network-First strategy: Always fetch fresh assets, fallback to cache if offline
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                // Return cache and refresh in background
-                fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-                    }
-                }).catch(() => {});
-                return cachedResponse;
-            }
-            return fetch(event.request);
-        })
+        fetch(event.request)
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                }
+                return networkResponse;
+            })
+            .catch(() => {
+                return caches.match(event.request);
+            })
     );
 });
 

@@ -69,12 +69,13 @@ const App = (() => {
         if (!splash) return;
 
         setTimeout(() => {
+            splash.style.pointerEvents = 'none';
             splash.classList.add('splash-exit');
             setTimeout(() => {
                 splash.style.display = 'none';
-                splash.remove();
-            }, 500);
-        }, 1400);
+                if (splash.parentNode) splash.parentNode.removeChild(splash);
+            }, 400);
+        }, 900);
     };
 
     /**
@@ -196,22 +197,26 @@ const App = (() => {
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Trigger view loader
-        switch (viewName) {
-            case 'home':
-                Dashboard.load();
-                break;
-            case 'wallet':
-                Wallet.load();
-                break;
-            case 'vip':
-                Subscriptions.load();
-                break;
-            case 'profile':
-                if (currentUser) {
-                    syncUserProfileUi({ user: currentUser, tier: PREVIEW_FALLBACK.tier });
-                }
-                break;
+        // Trigger view loader safely
+        try {
+            switch (viewName) {
+                case 'home':
+                    if (typeof Dashboard !== 'undefined' && Dashboard.load) Dashboard.load();
+                    break;
+                case 'wallet':
+                    if (typeof Wallet !== 'undefined' && Wallet.load) Wallet.load();
+                    break;
+                case 'vip':
+                    if (typeof Subscriptions !== 'undefined' && Subscriptions.load) Subscriptions.load();
+                    break;
+                case 'profile':
+                    if (currentUser) {
+                        syncUserProfileUi({ user: currentUser, tier: PREVIEW_FALLBACK.tier });
+                    }
+                    break;
+            }
+        } catch (loaderErr) {
+            console.warn('View loader non-blocking exception:', loaderErr);
         }
     };
 

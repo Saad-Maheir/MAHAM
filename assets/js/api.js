@@ -83,8 +83,11 @@ const API = (() => {
             // Handle Unauthorized Session Expiration
             if (response.status === 401) {
                 App.setAuthState(null);
-                App.showAuthModal();
-                throw new Error(data.message || 'انتهت صلاحية جلسة العمل. يرجى تسجيل الدخول مجدداً.');
+                // Only trigger auth modal on active mutations (POST/PUT), never on passive GET queries
+                if (fetchOptions.method !== 'GET') {
+                    App.showAuthModal();
+                }
+                throw new Error(data.message || 'انتهت صلاحية جلسة العمل.');
             }
 
             if (!response.ok || data.success === false) {
