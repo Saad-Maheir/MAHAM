@@ -126,3 +126,4 @@ class Validator {
         return 'uploads/receipts/' . $newFilename;
     }
 }
+

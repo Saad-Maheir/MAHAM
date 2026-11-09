@@ -365,3 +365,4 @@ const Dashboard = (() => {
         handleClaimReward
     };
 })();
+

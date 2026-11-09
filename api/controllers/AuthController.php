@@ -417,3 +417,4 @@ class AuthController {
         Response::success('تم تسجيل الخروج بنجاح.');
     }
 }
+

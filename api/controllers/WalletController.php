@@ -320,3 +320,4 @@ class WalletController {
         Response::success('تم جلب سجل المعاملات المالية بنجاح.', ['transactions' => $formatted]);
     }
 }
+

@@ -65,3 +65,4 @@ class Database {
         throw new RuntimeException("Cannot unserialize singleton");
     }
 }
+

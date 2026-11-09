@@ -239,3 +239,4 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `re
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `balance`, `pending_balance`, `free_tasks_used`, `is_verified`, `status`) VALUES
 (1, 'الإدارة المركزية | MAHAM', 'admin@maham-iq.com', '07800000000', '$2y$12$KkQe7wJ6bC7y1yvY0q/u1uW1b2e3r4t5y6u7i8o9p0a1s2d3f4g5h', 'admin', 0.00, 0.00, 0, 1, 'active');
+

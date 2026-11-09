@@ -17,6 +17,7 @@ require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/TaskController.php';
 require_once __DIR__ . '/controllers/WalletController.php';
 require_once __DIR__ . '/controllers/SubscriptionController.php';
+require_once __DIR__ . '/controllers/AdminController.php';
 
 // Handle CORS Pre-flight Options Request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -179,6 +180,106 @@ try {
             }
             break;
 
+        // Phase 2: Admin Command Center Endpoints
+        case 'admin/stats':
+            if ($method === 'GET') {
+                AdminController::getStats();
+            }
+            break;
+
+        case 'admin/deposits':
+            if ($method === 'GET') {
+                AdminController::getDeposits();
+            }
+            break;
+
+        case 'admin/deposits/approve':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::approveDeposit();
+            }
+            break;
+
+        case 'admin/deposits/reject':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::rejectDeposit();
+            }
+            break;
+
+        case 'admin/withdrawals':
+            if ($method === 'GET') {
+                AdminController::getWithdrawals();
+            }
+            break;
+
+        case 'admin/withdrawals/approve':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::approveWithdrawal();
+            }
+            break;
+
+        case 'admin/withdrawals/reject':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::rejectWithdrawal();
+            }
+            break;
+
+        case 'admin/tasks':
+            if ($method === 'GET') {
+                AdminController::getTasks();
+            }
+            break;
+
+        case 'admin/tasks/create':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::createTask();
+            }
+            break;
+
+        case 'admin/tasks/update':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::updateTask();
+            }
+            break;
+
+        case 'admin/users':
+            if ($method === 'GET') {
+                AdminController::getUsers();
+            }
+            break;
+
+        case 'admin/users/toggle-status':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::toggleUserStatus();
+            }
+            break;
+
+        case 'admin/users/adjust-balance':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::adjustUserBalance();
+            }
+            break;
+
+        case 'admin/settings':
+            if ($method === 'GET') {
+                AdminController::getSettings();
+            }
+            break;
+
+        case 'admin/settings/update':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::updateSettings();
+            }
+            break;
+
         default:
             Response::error('المسار المطلوب غير موجود في النظام.', 404, ['endpoint' => $endpoint]);
             break;
@@ -193,3 +294,4 @@ try {
         500
     );
 }
+

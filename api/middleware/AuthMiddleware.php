@@ -49,3 +49,4 @@ class AuthMiddleware {
         return $user;
     }
 }
+
