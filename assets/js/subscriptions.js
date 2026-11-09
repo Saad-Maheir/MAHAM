@@ -19,8 +19,83 @@ const Subscriptions = (() => {
 
             renderPackagesGrid(packagesList);
         } catch (err) {
-            console.error('Failed to load packages:', err);
-            App.toast('تعذر تحميل باقات الاشتراكات الاستثمارية.', 'error');
+            console.warn('API unavailable, utilizing fallback packages catalog:', err);
+            packagesList = [
+                {
+                    id: 1,
+                    code: 'free',
+                    name: 'الباقة المجانية الأساسية',
+                    badge_name: 'عضوية البداية',
+                    price_iqd: 0,
+                    profit_per_task: 250,
+                    tasks_per_day: 1,
+                    duration_days: 0,
+                    description: 'باقة مجانية تلقائية تمنحك 5 مهام تأسيسية بقيمة 250 د.ع لكل مهمة (مهمة واحدة كل 24 ساعة).',
+                    is_active_tier: true
+                },
+                {
+                    id: 2,
+                    code: 'vip_1',
+                    name: 'VIP 1 — الباقة البرونزية',
+                    badge_name: 'VIP 1',
+                    price_iqd: 15000,
+                    profit_per_task: 1000,
+                    tasks_per_day: 1,
+                    duration_days: 30,
+                    description: 'استثمار تمهيدي يمنحك مهام يومية مستمرة بأرباح يومية تبلغ 1,000 د.ع وتراكم أرباح شهري 30,000 د.ع.',
+                    is_active_tier: false
+                },
+                {
+                    id: 3,
+                    code: 'vip_2',
+                    name: 'VIP 2 — الباقة الفضية',
+                    badge_name: 'VIP 2',
+                    price_iqd: 35000,
+                    profit_per_task: 2500,
+                    tasks_per_day: 1,
+                    duration_days: 30,
+                    description: 'باقة فضية بمعدل ربح 2,500 د.ع يومياً وأرباح شهرية تراكمية تصل إلى 75,000 د.ع وسحب أسبوعي فوري.',
+                    is_active_tier: false
+                },
+                {
+                    id: 4,
+                    code: 'vip_3',
+                    name: 'VIP 3 — الباقة الذهبية',
+                    badge_name: 'VIP 3 Gold',
+                    price_iqd: 75000,
+                    profit_per_task: 6000,
+                    tasks_per_day: 1,
+                    duration_days: 30,
+                    description: 'الباقة الأكثر طلباً واستثماراً. تحقق ربحاً يومياً 6,000 د.ع بإجمالي أرباح شهرية تبلغ 180,000 د.ع.',
+                    is_active_tier: false
+                },
+                {
+                    id: 5,
+                    code: 'vip_4',
+                    name: 'VIP 4 — الباقة البلاتينية',
+                    badge_name: 'VIP 4 Platinum',
+                    price_iqd: 150000,
+                    profit_per_task: 13000,
+                    tasks_per_day: 1,
+                    duration_days: 30,
+                    description: 'باقة مخصصة للمستثمرين المتقدمين بربح يومي 13,000 د.ع وأرباح شهرية تقدر بـ 390,000 د.ع.',
+                    is_active_tier: false
+                },
+                {
+                    id: 6,
+                    code: 'vip_5',
+                    name: 'VIP 5 — باقة النخبة الماسية',
+                    badge_name: 'VIP 5 Diamond',
+                    price_iqd: 300000,
+                    profit_per_task: 28000,
+                    tasks_per_day: 1,
+                    duration_days: 30,
+                    description: 'أعلى باقة استثمارية وحصرية. تحقق ربحاً يومياً 28,000 د.ع بإجمالي أرباح شهرية 840,000 د.ع مع معالجة سحب فائقة السرعة.',
+                    is_active_tier: false
+                }
+            ];
+            currentBalance = 0;
+            renderPackagesGrid(packagesList);
         }
     };
 

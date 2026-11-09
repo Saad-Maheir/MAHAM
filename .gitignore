@@ -19,3 +19,7 @@ Thumbs.db
 vendor/
 node_modules/
 
+# Local deployment scripts & temporary archives
+deploy.js
+*.zip
+

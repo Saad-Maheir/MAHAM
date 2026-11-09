@@ -1,0 +1,82 @@
+name: Hostinger Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Step 1: Pre-Deployment Security Audit & PHP Syntax Linter
+  # ---------------------------------------------------------------------------
+  security-and-lint:
+    name: Security Audit & PHP Syntax Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring, fileinfo, json
+
+      - name: Security Check - Confirm Zero Tracked Secrets
+        run: |
+          echo "Auditing tracked files for forbidden .env credentials..."
+          if git ls-files | grep -E '^(\.env|\.env\.local|\.env\.production)$'; then
+            echo "SECURITY VIOLATION: .env file found in Git repository index!"
+            exit 1
+          fi
+          echo "Security Check Passed: No raw environment secrets are tracked in Git."
+
+      - name: Lint PHP Backend Files (Strict Syntax Verification)
+        run: |
+          echo "Verifying syntax for all backend PHP files..."
+          find api -type f -name "*.php" -print0 | while IFS= read -r -d '' file; do
+            php -l "$file" || exit 1
+          done
+          echo "All PHP backend controllers, middleware, and config files passed linting."
+
+  # ---------------------------------------------------------------------------
+  # Step 2: Automated Deployment to Hostinger via Secure FTPS
+  # ---------------------------------------------------------------------------
+  deploy-to-hostinger:
+    name: Deploy to Hostinger Production (public_html)
+    needs: security-and-lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Deploy to Hostinger via Secure FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          server-dir: ${{ secrets.HOSTINGER_SERVER_DIR || 'public_html/' }}
+          protocol: ftps
+          port: 21
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            .env
+            .env.local
+            .env.production
+            uploads/receipts/**
+            !uploads/receipts/.gitkeep
+            !uploads/receipts/.htaccess
+            database/**
+            README.md
+
