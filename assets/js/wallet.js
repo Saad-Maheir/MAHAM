@@ -1,11 +1,12 @@
 /**
  * MAHAM FinTech Platform - Wallet, Manual Deposits & Payout Controller
- * Manages receipts upload, payment methods clipboard, and transactions ledger
+ * Manages Asiacell 14-digit cards, MasterCard transfers, exclusive MasterCard payouts,
+ * Anti-Fraud protections, clipboard utilities, and transactions ledger
  */
 
 const Wallet = (() => {
     let officialAccounts = {};
-    let selectedPaymentMethod = 'zain_cash';
+    let selectedPaymentMethod = 'asiacell';
     let selectedReceiptFile = null;
 
     /**
@@ -23,15 +24,21 @@ const Wallet = (() => {
             const transactions = txRes.data.transactions || [];
 
             renderBalanceCards(balances);
-            updatePaymentMethodDetails();
+            selectMethod(selectedPaymentMethod);
             renderTransactionsTable(transactions);
         } catch (err) {
             console.warn('API unavailable, utilizing fallback wallet state:', err);
-            // High-fidelity fallback state for seamless offline & static preview
             officialAccounts = {
-                zain_cash: { title: 'محفظة زين كاش المعتمدة (ZainCash العراق)', account: '07801234567' },
-                asia_hawala: { title: 'حساب آسيا حوالة الرسمي (AsiaHawala)', account: '07701234567' },
-                qi_card: { title: 'ماستر كارد الرافدين / مصرف الرشيد (Qi Card)', account: '9876543210123456' }
+                asiacell: {
+                    title: 'شحن فوري عبر كروت تعبئة آسيا سيل',
+                    account: 'كارت شحن 14 رقماً',
+                    instructions: 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع'
+                },
+                mastercard: {
+                    title: 'شركة مهام للخدمات المالية ذ.م.م',
+                    account: '5300 1234 5678 9012',
+                    instructions: 'قم بالتحويل إلى رقم الماستر كارد أعلاه ثم أرفق صورة إشعار التحويل المالي'
+                }
             };
             const fallbackBalances = {
                 available_balance: 0,
@@ -40,7 +47,7 @@ const Wallet = (() => {
                 official_accounts: officialAccounts
             };
             renderBalanceCards(fallbackBalances);
-            updatePaymentMethodDetails();
+            selectMethod(selectedPaymentMethod);
             renderTransactionsTable([]);
         }
     };
@@ -110,26 +117,69 @@ const Wallet = (() => {
     };
 
     /**
-     * Select Payment Method for Deposit
+     * Select Payment Method for Deposit (Asiacell vs MasterCard)
      */
     const selectMethod = (method) => {
         selectedPaymentMethod = method;
 
-        const methods = ['zain_cash', 'asia_hawala', 'qi_card'];
+        const methods = ['asiacell', 'mastercard'];
         methods.forEach(m => {
             const btn = document.getElementById(`method-btn-${m}`);
             if (btn) {
                 if (m === method) {
                     btn.classList.add('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-300');
-                    btn.classList.remove('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+                    btn.classList.remove('border-slate-800', 'bg-slate-900', 'text-slate-400');
                 } else {
                     btn.classList.remove('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-300');
-                    btn.classList.add('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+                    btn.classList.add('border-slate-800', 'bg-slate-900', 'text-slate-400');
                 }
             }
         });
 
-        updatePaymentMethodDetails();
+        const asiacellBox = document.getElementById('asiacell-instructions-box');
+        const mastercardBox = document.getElementById('mastercard-dest-box');
+        const receiptUploadGroup = document.getElementById('receipt-upload-group');
+        const refLabel = document.getElementById('deposit-ref-label');
+        const refInput = document.getElementById('deposit-ref-input');
+        const receiptInput = document.getElementById('receipt-file-input');
+
+        if (method === 'asiacell') {
+            // Asiacell Mode: 14-digit scratch card, NO receipt screenshot
+            if (asiacellBox) asiacellBox.classList.remove('hidden');
+            if (mastercardBox) mastercardBox.classList.add('hidden');
+            if (receiptUploadGroup) receiptUploadGroup.classList.add('hidden');
+
+            if (receiptInput) receiptInput.required = false;
+
+            if (refLabel) {
+                refLabel.innerHTML = `رقم كارت شحن آسيا سيل المكون من 14 رقماً: <span class="text-rose-400">*</span>`;
+            }
+            if (refInput) {
+                refInput.placeholder = 'أدخل 14 رقماً تسلسلياً لكارت الشحن';
+                refInput.maxLength = 14;
+                refInput.required = true;
+                refInput.pattern = '\\d{14}';
+            }
+        } else {
+            // MasterCard Mode: Official card transfer with MANDATORY screenshot
+            if (asiacellBox) asiacellBox.classList.add('hidden');
+            if (mastercardBox) mastercardBox.classList.remove('hidden');
+            if (receiptUploadGroup) receiptUploadGroup.classList.remove('hidden');
+
+            if (receiptInput) receiptInput.required = true;
+
+            if (refLabel) {
+                refLabel.innerHTML = `رقم الحوالة أو الملاحظة (اختياري):`;
+            }
+            if (refInput) {
+                refInput.placeholder = 'رقم الحوالة في وصل التحويل إن وجد';
+                refInput.maxLength = 40;
+                refInput.required = false;
+                refInput.removeAttribute('pattern');
+            }
+
+            updatePaymentMethodDetails();
+        }
     };
 
     /**
@@ -142,33 +192,32 @@ const Wallet = (() => {
         const accNumEl = document.getElementById('official-account-number');
         const accNameEl = document.getElementById('official-account-name');
 
-        if (accNumEl) accNumEl.textContent = details.account;
-        if (accNameEl) accNameEl.textContent = details.title;
+        if (accNumEl && details.account) accNumEl.textContent = details.account;
+        if (accNameEl && details.title) accNameEl.textContent = details.title;
     };
 
     /**
      * Copy Official Account Number to Clipboard
      */
     const copyAccountNumber = () => {
-        const details = officialAccounts[selectedPaymentMethod];
-        if (!details) return;
+        const details = officialAccounts[selectedPaymentMethod] || {};
+        const accToCopy = details.account || '5300 1234 5678 9012';
 
-        navigator.clipboard.writeText(details.account).then(() => {
+        navigator.clipboard.writeText(accToCopy).then(() => {
             const copyBtn = document.getElementById('copy-account-btn');
-            const originalText = copyBtn.innerHTML;
-
-            copyBtn.innerHTML = `
-                <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                </svg>
-                <span class="text-emerald-400">تم النسخ</span>
-            `;
-
-            setTimeout(() => {
-                copyBtn.innerHTML = originalText;
-            }, 2000);
-
-            App.toast('تم نسخ رقم الحساب إلى الحافظة بنجاح.', 'success');
+            if (copyBtn) {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = `
+                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-emerald-400">تم النسخ</span>
+                `;
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            }
+            App.toast('تم نسخ رقم بطاقة الماستر كارد إلى الحافظة بنجاح.', 'success');
         }).catch(() => {
             App.toast('تعذر نسخ الرقم تلقائياً.', 'warning');
         });
@@ -186,7 +235,7 @@ const Wallet = (() => {
     };
 
     /**
-     * Handle Receipt File Selection & Preview
+     * Handle Receipt File Selection & Preview (MasterCard only)
      */
     const handleReceiptChange = (e) => {
         const file = e.target.files[0];
@@ -214,32 +263,34 @@ const Wallet = (() => {
     };
 
     /**
-     * Submit Deposit Request
+     * Submit Deposit Request (Asiacell 14-digit or MasterCard with receipt)
      */
     const handleDepositSubmit = async (e) => {
         e.preventDefault();
         const amountInput = document.getElementById('deposit-amount-input');
         const refInput = document.getElementById('deposit-ref-input');
-        const senderInput = document.getElementById('deposit-sender-input');
         const submitBtn = document.getElementById('deposit-submit-btn');
 
         const amount = Number(amountInput.value);
         const ref = refInput.value.trim();
-        const sender = senderInput ? senderInput.value.trim() : '';
 
         if (!amount || amount < 5000) {
             App.toast('الحد الأدنى للإيداع هو 5,000 د.ع.', 'error');
             return;
         }
 
-        if (ref.length < 4) {
-            App.toast('يرجى إدخال رقم الإشعار أو الحوالة بشكل صحيح.', 'error');
-            return;
-        }
-
-        if (!selectedReceiptFile) {
-            App.toast('يرجى إرفاق صورة إشعار التحويل المالي.', 'error');
-            return;
+        if (selectedPaymentMethod === 'asiacell') {
+            const cleanCard = ref.replace(/\D/g, '');
+            if (cleanCard.length !== 14) {
+                App.toast('يرجى إدخال رقم كارت شحن آسيا سيل المكون من 14 رقماً بالضبط.', 'error');
+                return;
+            }
+        } else {
+            // MasterCard requires receipt image
+            if (!selectedReceiptFile) {
+                App.toast('يرجى إرفاق صورة إشعار التحويل المالي (Screenshot).', 'error');
+                return;
+            }
         }
 
         submitBtn.disabled = true;
@@ -248,7 +299,7 @@ const Wallet = (() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
-            جاري رفع الإشعار وتسجيل الطلب...
+            جاري تسجيل طلب الإيداع وتدقيقه...
         `;
 
         try {
@@ -256,8 +307,9 @@ const Wallet = (() => {
             formData.append('payment_method', selectedPaymentMethod);
             formData.append('amount', amount);
             formData.append('tx_reference', ref);
-            formData.append('sender_account', sender);
-            formData.append('receipt', selectedReceiptFile);
+            if (selectedPaymentMethod === 'mastercard' && selectedReceiptFile) {
+                formData.append('receipt', selectedReceiptFile);
+            }
 
             const res = await API.post('wallet/deposit', formData, true);
             App.toast(res.message, 'success');
@@ -265,9 +317,10 @@ const Wallet = (() => {
             // Reset form
             amountInput.value = '';
             refInput.value = '';
-            if (senderInput) senderInput.value = '';
-            document.getElementById('receipt-file-input').value = '';
-            document.getElementById('receipt-preview-container').classList.add('hidden');
+            const receiptInput = document.getElementById('receipt-file-input');
+            if (receiptInput) receiptInput.value = '';
+            const previewContainer = document.getElementById('receipt-preview-container');
+            if (previewContainer) previewContainer.classList.add('hidden');
             selectedReceiptFile = null;
 
             load(); // Reload ledger
@@ -280,26 +333,24 @@ const Wallet = (() => {
     };
 
     /**
-     * Submit Withdrawal Request
+     * Submit Withdrawal Request (Strictly MasterCard)
      */
     const handleWithdrawSubmit = async (e) => {
         e.preventDefault();
         const amountInput = document.getElementById('withdraw-amount-input');
-        const methodSelect = document.getElementById('withdraw-method-select');
         const receiverInput = document.getElementById('withdraw-account-input');
         const submitBtn = document.getElementById('withdraw-submit-btn');
 
         const amount = Number(amountInput.value);
-        const method = methodSelect.value;
-        const receiver = receiverInput.value.trim();
+        const receiver = receiverInput.value.trim().replace(/[\s\-]/g, '');
 
         if (!amount || amount < 5000) {
             App.toast('الحد الأدنى لسحب الأرباح هو 5,000 د.ع.', 'error');
             return;
         }
 
-        if (receiver.length < 6) {
-            App.toast('يرجى إدخال رقم المحفظة أو الحساب المصرفي المستلم بشكل صحيح.', 'error');
+        if (receiver.length < 8 || receiver.length > 20) {
+            App.toast('يرجى إدخال الرقم التسلسلي لبطاقة الماستر كارد بدقة (8 إلى 20 رقماً).', 'error');
             return;
         }
 
@@ -309,13 +360,13 @@ const Wallet = (() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
-            جاري تدقيق الرصيد وتقديم الطلب...
+            جاري قفل الرصيد وتأكيد طلب السحب...
         `;
 
         try {
             const res = await API.post('wallet/withdraw', {
                 amount: amount,
-                payment_method: method,
+                payment_method: 'mastercard',
                 receiver_account: receiver
             });
 
@@ -329,7 +380,7 @@ const Wallet = (() => {
             App.toast(err.message, 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = `<span>تقديم طلب السحب المالي</span>`;
+            submitBtn.innerHTML = `<span>تقديم طلب السحب المالي عبر ماستر كارد</span>`;
         }
     };
 
@@ -343,7 +394,7 @@ const Wallet = (() => {
         if (transactions.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="py-10 text-center text-slate-500 text-sm">
+                    <td colspan="4" class="py-10 text-center text-slate-500 text-sm">
                         لا توجد أي معاملات مسجلة في محفظتك حتى الآن.
                     </td>
                 </tr>
@@ -390,8 +441,9 @@ const Wallet = (() => {
                         <span class="text-[11px] text-slate-500 block font-mono mt-0.5">${tx.formatted_date}</span>
                     </td>
                     <td class="py-3 px-4 text-slate-300 text-xs">
-                        <span>${tx.payment_method}</span>
-                        ${tx.tx_reference !== '—' ? `<span class="block text-[11px] text-slate-500 font-mono">رقم: ${tx.tx_reference}</span>` : ''}
+                        <span class="font-bold">${tx.payment_method}</span>
+                        ${tx.tx_reference && tx.tx_reference !== '—' ? `<span class="block text-[11px] text-slate-400 font-mono mt-0.5">رقم/كارت: ${tx.tx_reference}</span>` : ''}
+                        ${tx.sender_account && tx.sender_account !== '—' && tx.sender_account !== tx.tx_reference ? `<span class="block text-[10px] text-slate-500 font-mono">${tx.sender_account}</span>` : ''}
                     </td>
                     <td class="py-3 px-4 font-mono font-bold ${amountColor} text-left" dir="ltr">
                         ${amountPrefix}${Number(tx.amount).toLocaleString('ar-IQ')} <span class="text-xs">IQD</span>
@@ -415,4 +467,3 @@ const Wallet = (() => {
         handleWithdrawSubmit
     };
 })();
-

@@ -86,8 +86,14 @@ const Auth = (() => {
 
             App.toast(res.message, 'success');
 
-            // Open OTP Verification Modal
-            openOtpModal(email, res.data.debug_otp);
+            if (res.data && res.data.user) {
+                App.setAuthState(res.data.user);
+                App.syncUserProfileUi(res.data);
+                App.hideAuthModal();
+                App.navigate('home');
+            } else if (res.data && res.data.requires_otp) {
+                openOtpModal(email, res.data.debug_otp);
+            }
         } catch (err) {
             App.toast(err.message, 'error');
         } finally {
@@ -133,6 +139,7 @@ const Auth = (() => {
 
             App.toast('مرحباً بك مجدداً في منصة مهام!', 'success');
             App.setAuthState(res.data.user);
+            App.syncUserProfileUi(res.data);
             App.hideAuthModal();
             App.navigate('home');
         } catch (err) {
@@ -349,19 +356,7 @@ const Auth = (() => {
             App.hideAuthModal();
             App.navigate('home');
         } catch (err) {
-            console.warn('API Google sign-in fallback:', err);
-            const fallbackUser = {
-                id: 1,
-                full_name: 'سعد ماهر (Google)',
-                email: 'saad.maher@gmail.com',
-                phone: '07801234567',
-                balance: 25000,
-                role: 'user'
-            };
-            App.setAuthState(fallbackUser);
-            App.hideAuthModal();
-            App.toast('تم تسجيل الدخول بنجاح بحساب Google المعتمد.', 'success');
-            App.navigate('home');
+            App.toast(err.message || 'فشلت المزامنة مع حساب Google. يرجى مراجعة الاتصال.', 'error');
         }
     };
 

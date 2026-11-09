@@ -7,38 +7,14 @@ const App = (() => {
     let currentUser = null;
     let currentView = 'home';
 
-    // Authentic Client Preview Fallback Data (Guarantees zero-hang offline experience)
-    const PREVIEW_FALLBACK = {
-        user: {
-            id: 1,
-            full_name: 'سعد ماهر سعد',
-            email: 'saad@maham-iq.com',
-            phone: '07801234567',
-            role: 'user',
-            balance: 25000.0,
-            pending_balance: 0.0,
-            is_verified: true,
-            free_tasks_used: 1,
-            last_task_completed_at: null
-        },
-        tier: {
-            is_vip: false,
-            active_subscriptions: [],
-            active_tier_name: 'الباقة الأساسية',
-            active_badge: 'الباقة الأساسية',
-            daily_profit: 250.0,
-            free_tasks_remaining: 4,
-            tasks_limit_display: '4 من أصل 5',
-            cooldown_remaining_seconds: 0,
-            can_execute_task: true
-        }
-    };
-
     /**
      * Application Initialization
      */
     const init = () => {
-        // 1. Kick off cinematic splash screen immediately (Decoupled from network latency)
+        // 0. Initialize Theme (Default Light Mode)
+        initTheme();
+
+        // 1. Kick off cinematic splash screen immediately
         runSplashSequence();
 
         // 2. Register Service Worker for PWA
@@ -54,11 +30,46 @@ const App = (() => {
         // 4. Initialize CSRF in background
         API.initCsrf().catch(() => {});
 
-        // 5. Check session or apply authentic presentation state
+        // 5. Check active database session or enforce auth gate
         checkSession();
 
         // 6. Handle URL hash changes
         window.addEventListener('hashchange', handleHashChange);
+    };
+
+    /**
+     * Theme Initialization & Toggle System (Default: Light Mode)
+     */
+    const initTheme = () => {
+        const savedTheme = localStorage.getItem('maham_theme') || 'light';
+        applyTheme(savedTheme);
+    };
+
+    const toggleTheme = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        const newTheme = isDark ? 'light' : 'dark';
+        applyTheme(newTheme);
+        localStorage.setItem('maham_theme', newTheme);
+        toast(`تم التبديل إلى ${newTheme === 'dark' ? 'الوضع الليلي' : 'الوضع النهاري'} بنجاح.`, 'info');
+    };
+
+    const applyTheme = (theme) => {
+        const html = document.documentElement;
+        const headerIcon = document.getElementById('header-theme-icon');
+        const profLabel = document.getElementById('profile-theme-label');
+        const profIcon = document.getElementById('profile-theme-icon');
+
+        if (theme === 'dark') {
+            html.classList.add('dark');
+            if (headerIcon) headerIcon.textContent = '☀️';
+            if (profLabel) profLabel.textContent = 'الوضع الليلي';
+            if (profIcon) profIcon.textContent = '🌙';
+        } else {
+            html.classList.remove('dark');
+            if (headerIcon) headerIcon.textContent = '🌙';
+            if (profLabel) profLabel.textContent = 'الوضع النهاري';
+            if (profIcon) profIcon.textContent = '☀️';
+        }
     };
 
     /**
@@ -79,7 +90,7 @@ const App = (() => {
     };
 
     /**
-     * Check Session and Authenticate (With Instant Fallback)
+     * Check Session and Authenticate (Strict Database Enforced)
      */
     const checkSession = async () => {
         try {
@@ -92,39 +103,50 @@ const App = (() => {
                 return;
             }
         } catch (e) {
-            // Network or unauthenticated fallback for flawless client inspection
+            // Unauthenticated or network error
         }
 
-        // Apply authentic presentation profile
-        currentUser = PREVIEW_FALLBACK.user;
-        setAuthState(currentUser);
-        syncUserProfileUi(PREVIEW_FALLBACK);
-        navigate(getViewFromHash() || 'home');
+        // Enforce mandatory full-screen authentication gate
+        currentUser = null;
+        setAuthState(null);
+        showAuthModal();
     };
 
     /**
-     * Set Global Authentication State
+     * Set Global Authentication State & Mandatory Gate Control
      */
     const setAuthState = (user) => {
         currentUser = user;
         const authModal = document.getElementById('auth-modal');
-        const userSummaryPills = document.querySelectorAll('.auth-user-pill');
+        const mainLayout = document.getElementById('main-app-container');
+        const bottomNav = document.querySelector('.mobile-bottom-nav');
 
         if (user) {
             if (authModal) {
                 authModal.classList.add('hidden');
                 authModal.classList.remove('flex');
             }
-            userSummaryPills.forEach(pill => pill.classList.remove('hidden'));
+            if (mainLayout) mainLayout.classList.remove('hidden');
+            if (bottomNav) bottomNav.classList.remove('hidden');
+            loadNotifications();
+        } else {
+            if (authModal) {
+                authModal.classList.remove('hidden');
+                authModal.classList.add('flex');
+            }
+            if (mainLayout) mainLayout.classList.add('hidden');
+            if (bottomNav) bottomNav.classList.add('hidden');
         }
     };
 
     /**
-     * Sync User Profile Data in Sidebar & Header
+     * Sync Real User Profile Data in Sidebar & Header
      */
     const syncUserProfileUi = (data) => {
-        const user = data.user || PREVIEW_FALLBACK.user;
-        const tier = data.tier || PREVIEW_FALLBACK.tier;
+        const user = data.user || currentUser;
+        const tier = data.tier || {};
+
+        if (!user) return;
 
         const userNameEls = document.querySelectorAll('.current-user-name');
         const userEmailEls = document.querySelectorAll('.current-user-email');
@@ -132,20 +154,31 @@ const App = (() => {
         const userBalanceEls = document.querySelectorAll('.current-user-balance-nav');
         const userBadgeEls = document.querySelectorAll('.current-user-tier-badge');
 
-        userNameEls.forEach(el => el.textContent = user.full_name);
-        userEmailEls.forEach(el => el.textContent = user.email);
-        userPhoneEls.forEach(el => el.textContent = user.phone);
-        userBalanceEls.forEach(el => el.textContent = `${Number(user.balance).toLocaleString('ar-IQ')} د.ع`);
-        userBadgeEls.forEach(el => el.textContent = tier.active_badge);
+        userNameEls.forEach(el => el.textContent = user.full_name || 'المستخدم');
+        userEmailEls.forEach(el => el.textContent = user.email || '—');
+        userPhoneEls.forEach(el => el.textContent = user.phone || 'Google');
+        userBalanceEls.forEach(el => el.textContent = `${Number(user.balance || 0).toLocaleString('ar-IQ')} د.ع`);
+        userBadgeEls.forEach(el => el.textContent = tier.active_badge || 'الباقة الأساسية');
 
         // Render Profile view details
         const profBalance = document.getElementById('prof-stat-balance');
         const profCompleted = document.getElementById('prof-stat-completed');
         const profTier = document.getElementById('prof-stat-tier');
 
-        if (profBalance) profBalance.textContent = `${Number(user.balance).toLocaleString('ar-IQ')} د.ع`;
-        if (profCompleted) profCompleted.textContent = `${user.free_tasks_used} مهمة`;
-        if (profTier) profTier.textContent = tier.active_tier_name;
+        if (profBalance) profBalance.textContent = `${Number(user.balance || 0).toLocaleString('ar-IQ')} د.ع`;
+        if (profCompleted) profCompleted.textContent = `${user.free_tasks_used || 0} مهمة`;
+        if (profTier) profTier.textContent = tier.active_tier_name || 'الباقة الأساسية';
+    };
+
+    /**
+     * Control Dashboard Action Button (Admin Command vs. User VIP)
+     */
+    const handleDashboardControlClick = () => {
+        if (currentUser && currentUser.role === 'admin') {
+            window.location.href = 'admin.html';
+        } else {
+            navigate('vip');
+        }
     };
 
     /**
@@ -175,11 +208,11 @@ const App = (() => {
 
             if (mobileBtn) {
                 if (v === viewName) {
-                    mobileBtn.classList.add('active', 'text-emerald-400');
-                    mobileBtn.classList.remove('text-slate-400');
+                    mobileBtn.classList.add('active', 'text-emerald-600');
+                    mobileBtn.classList.remove('text-slate-500');
                 } else {
-                    mobileBtn.classList.remove('active', 'text-emerald-400');
-                    mobileBtn.classList.add('text-slate-400');
+                    mobileBtn.classList.remove('active', 'text-emerald-600');
+                    mobileBtn.classList.add('text-slate-500');
                 }
             }
 
@@ -212,7 +245,7 @@ const App = (() => {
                     break;
                 case 'profile':
                     if (currentUser) {
-                        syncUserProfileUi({ user: currentUser, tier: PREVIEW_FALLBACK.tier });
+                        syncUserProfileUi({ user: currentUser, tier: {} });
                     }
                     break;
             }
@@ -235,10 +268,14 @@ const App = (() => {
 
     const showAuthModal = () => {
         const modal = document.getElementById('auth-modal');
+        const mainLayout = document.getElementById('main-app-container');
+        const bottomNav = document.querySelector('.mobile-bottom-nav');
         if (modal) {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
+        if (mainLayout) mainLayout.classList.add('hidden');
+        if (bottomNav) bottomNav.classList.add('hidden');
     };
 
     const hideAuthModal = () => {
@@ -318,13 +355,124 @@ const App = (() => {
         }, 3500);
     };
 
+    /**
+     * Financial & System Notifications System (Bell 🔔 Engine)
+     */
+    let notificationsList = [];
+
+    const loadNotifications = async () => {
+        if (!currentUser) return;
+        try {
+            const res = await API.get('notifications/list');
+            if (res && res.data) {
+                notificationsList = res.data.notifications || [];
+                const unreadDot = document.getElementById('header-unread-dot');
+                if (unreadDot) {
+                    if (res.data.unread_count > 0 && notificationsList.length > 0) {
+                        unreadDot.classList.remove('hidden');
+                    } else {
+                        unreadDot.classList.add('hidden');
+                    }
+                }
+            }
+        } catch (e) {
+            // Non-blocking
+        }
+    };
+
+    const toggleNotifications = () => {
+        const modal = document.getElementById('notifications-modal');
+        if (!modal) return;
+
+        if (modal.classList.contains('hidden')) {
+            openNotifications();
+        } else {
+            closeNotifications();
+        }
+    };
+
+    const openNotifications = async () => {
+        const modal = document.getElementById('notifications-modal');
+        const container = document.getElementById('notifications-list-container');
+        const unreadDot = document.getElementById('header-unread-dot');
+
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        if (unreadDot) unreadDot.classList.add('hidden');
+
+        await loadNotifications();
+
+        if (!container) return;
+
+        if (!notificationsList || notificationsList.length === 0) {
+            container.innerHTML = `
+                <div class="py-12 text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-xl">
+                        🔔
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-white mb-1">لا توجد إشعارات جديدة</h4>
+                    <p class="text-xs text-slate-500">ستصلك هنا إشعارات فورية عند تأكيد السحب أو الإيداع واعتماد العمليات.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = notificationsList.map(n => {
+            const isSuccess = n.type === 'success';
+            const iconSvg = isSuccess ? `
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            ` : `
+                <div class="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </div>
+            `;
+
+            return `
+                <div class="p-3.5 rounded-2xl border ${isSuccess ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'} flex items-start gap-3 transition">
+                    ${iconSvg}
+                    <div class="flex-1 text-right">
+                        <div class="flex items-center justify-between mb-1">
+                            <h5 class="text-xs font-bold ${isSuccess ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${n.title}</h5>
+                            <span class="text-[10px] text-slate-400 font-mono">${n.timestamp ? n.timestamp.substring(0, 16) : ''}</span>
+                        </div>
+                        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">${n.message}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const closeNotifications = () => {
+        const modal = document.getElementById('notifications-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    };
+
     return {
         init,
         navigate,
         setAuthState,
+        syncUserProfileUi,
         showAuthModal,
         hideAuthModal,
+        handleDashboardControlClick,
         toast,
+        initTheme,
+        toggleTheme,
+        loadNotifications,
+        toggleNotifications,
+        openNotifications,
+        closeNotifications,
         getCurrentUser: () => currentUser
     };
 })();

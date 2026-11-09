@@ -7,13 +7,22 @@ const API = (() => {
     let csrfToken = null;
 
     /**
-     * Determine optimal API base path
+     * Determine optimal API base path - Direct file invocation for 100% InfinityFree compatibility
      */
     const getBaseUrl = () => {
-        // Works seamlessly whether on localhost, subfolder, or Hostinger domain
         const origin = window.location.origin;
-        const pathname = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
-        return `${origin}${pathname}/api`;
+        const pathname = window.location.pathname.replace(/\/(index|admin)\.html$/, '').replace(/\/$/, '');
+        return `${origin}${pathname}/api/index.php`;
+    };
+
+    /**
+     * Build URL supporting both direct route and query parameter
+     */
+    const buildUrl = (endpoint) => {
+        const clean = endpoint.replace(/^\//, '');
+        const [routePart, queryPart] = clean.split('?');
+        const queryParams = queryPart ? `&${queryPart}` : '';
+        return `${getBaseUrl()}?route=${encodeURIComponent(routePart)}${queryParams}`;
     };
 
     /**
@@ -21,7 +30,7 @@ const API = (() => {
      */
     const initCsrf = async () => {
         try {
-            const res = await fetch(`${getBaseUrl()}/csrf-token`, { credentials: 'same-origin' });
+            const res = await fetch(buildUrl('csrf-token'), { credentials: 'same-origin' });
             if (res.ok) {
                 const data = await res.json();
                 if (data.data && data.data.csrf_token) {
@@ -37,7 +46,7 @@ const API = (() => {
      * Unified request handler
      */
     const request = async (endpoint, options = {}) => {
-        const url = `${getBaseUrl()}/${endpoint.replace(/^\//, '')}`;
+        const url = buildUrl(endpoint);
         const headers = options.headers || {};
 
         headers['Accept'] = 'application/json';
@@ -83,11 +92,8 @@ const API = (() => {
             // Handle Unauthorized Session Expiration
             if (response.status === 401) {
                 App.setAuthState(null);
-                // Only trigger auth modal on active mutations (POST/PUT), never on passive GET queries
-                if (fetchOptions.method !== 'GET') {
-                    App.showAuthModal();
-                }
-                throw new Error(data.message || 'انتهت صلاحية جلسة العمل.');
+                App.showAuthModal();
+                throw new Error(data.message || 'انتهت صلاحية جلسة العمل أو يلزم تسجيل الدخول.');
             }
 
             if (!response.ok || data.success === false) {

@@ -25,22 +25,18 @@ class Validator {
     }
 
     /**
-     * Validate Iraqi Telecom Operator format (Zain, Asiacell, Korek)
-     * Formats: 07xxxxxxxxx, +9647xxxxxxxxx, 9647xxxxxxxxx
+     * Validate flexible phone format (8 to 15 digits - supports Iraq, Egypt, and International numbers)
      */
     public static function isValidIraqiPhone(string $phone): bool {
-        $clean = preg_replace('/[\s\-]/', '', $phone);
-        return (bool)preg_match('/^(?:\+?964|0)?7[3-9]\d{8}$/', $clean);
+        $clean = preg_replace('/[\s\-\+]/', '', $phone);
+        return (bool)preg_match('/^\d{8,15}$/', $clean);
     }
 
     /**
-     * Format phone to canonical Iraqi standard (e.g. 07801234567)
+     * Format phone to clean canonical digits
      */
     public static function formatIraqiPhone(string $phone): string {
         $clean = preg_replace('/[\s\-\+]/', '', $phone);
-        if (str_starts_with($clean, '964')) {
-            $clean = '0' . substr($clean, 3);
-        }
         return $clean;
     }
 
@@ -92,9 +88,10 @@ class Validator {
             throw new InvalidArgumentException("حجم الصورة يتجاوز الحد المسموح به (5 ميجابايت).");
         }
 
-        // Validate MIME type via fileinfo
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
+        // Validate real binary MIME type via finfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
 
         $allowedMimes = [
             'image/jpeg' => 'jpg',
@@ -104,12 +101,24 @@ class Validator {
         ];
 
         if (!array_key_exists($mimeType, $allowedMimes)) {
-            throw new InvalidArgumentException("صيغة الملف غير مدعومة. يسمح فقط بالصور بصيغة JPG أو PNG أو WEBP.");
+            throw new InvalidArgumentException("صيغة الملف غير مدعومة. يسمح فقط بالصور المعتمدة بصيغة JPG أو PNG أو WEBP.");
+        }
+
+        // Validate image integrity with getimagesize
+        $imageInfo = @getimagesize($file['tmp_name']);
+        if ($imageInfo === false) {
+            throw new InvalidArgumentException("الملف المرفوع تالف أو ليس صورة حقيقية صالحة.");
+        }
+
+        // Anti-Webshell Scan: Check for embedded PHP payloads or tags
+        $fileContents = file_get_contents($file['tmp_name'], false, null, 0, 8192);
+        if ($fileContents !== false && (preg_match('/<\?php|<\?=|<script/i', $fileContents))) {
+            throw new InvalidArgumentException("تم رفض الملف لأسباب أمنية (تم اكتشاف كود تنفيذي داخل الصورة).");
         }
 
         $extension = $allowedMimes[$mimeType];
         
-        // Generate cryptographically unguessable filename
+        // Generate cryptographically unguessable filename (strictly enforces single safe extension)
         $randomHash = bin2hex(random_bytes(16));
         $newFilename = "receipt_" . date('Ymd_His') . "_{$randomHash}.{$extension}";
 

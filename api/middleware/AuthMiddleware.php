@@ -20,6 +20,16 @@ class AuthMiddleware {
             Response::error('يرجى تسجيل الدخول للوصول إلى هذه الخدمة.', 401);
         }
 
+        // Anti-Session Hijacking: Strict Browser Fingerprint Verification
+        $currentUserAgentHash = hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        if (isset($_SESSION['user_agent_hash']) && !hash_equals($_SESSION['user_agent_hash'], $currentUserAgentHash)) {
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
+            Response::error('تم إنهاء الجلسة لأسباب أمنية (اكتشاف تغيير في بصمة الجهاز أو المتصفح). يرجى تسجيل الدخول مجدداً.', 401);
+        }
+
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("SELECT id, full_name, email, phone, role, balance, pending_balance, free_tasks_used, last_task_completed_at, is_verified, status FROM users WHERE id = :id LIMIT 1");
         $stmt->execute(['id' => $userId]);

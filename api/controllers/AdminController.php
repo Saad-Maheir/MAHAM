@@ -13,6 +13,13 @@ require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class AdminController {
     /**
+     * Get Executive Platform Statistics & Metrics (stats alias)
+     */
+    public static function stats(): void {
+        self::getStats();
+    }
+
+    /**
      * Get Executive Platform Statistics & Metrics
      */
     public static function getStats(): void {
@@ -612,6 +619,13 @@ class AdminController {
         $stmt->execute(['status' => $status, 'id' => $userId]);
 
         Response::success("تم تعديل حالة الحساب بنجاح إلى: {$status}.");
+    }
+
+    /**
+     * Adjust User Balance (adjustBalance alias)
+     */
+    public static function adjustBalance(): void {
+        self::adjustUserBalance();
     }
 
     /**

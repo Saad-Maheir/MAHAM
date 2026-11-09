@@ -9,15 +9,15 @@
 :root {
     --font-primary: 'IBM Plex Sans Arabic', 'Almarai', system-ui, -apple-system, sans-serif;
     --font-heading: 'IBM Plex Sans Arabic', 'Almarai', sans-serif;
-    --color-bg: #070b14;
-    --color-surface: rgba(15, 23, 42, 0.78);
-    --color-surface-hover: rgba(30, 41, 59, 0.9);
-    --color-border: rgba(255, 255, 255, 0.08);
-    --color-border-hover: rgba(255, 255, 255, 0.18);
-    --color-emerald: #10b981;
-    --color-emerald-glow: rgba(16, 185, 129, 0.28);
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-border-hover: #cbd5e1;
+    --color-emerald: #059669;
+    --color-emerald-glow: rgba(5, 150, 105, 0.2);
     --color-crimson: #e11d48;
-    --color-amber: #f59e0b;
+    --color-amber: #d97706;
 }
 
 * {
@@ -33,13 +33,161 @@ html {
 
 body {
     background-color: var(--color-bg);
-    color: #f1f5f9;
+    color: #1e293b;
     overflow-x: clip;
     min-height: 100vh;
     padding: 0;
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ========================================================================= */
+/* DARK MODE THEME ENGINE */
+/* ========================================================================= */
+html.dark {
+    --color-bg: #070b14;
+    --color-surface: #0f172a;
+    --color-surface-hover: #1e293b;
+    --color-border: #1e293b;
+    --color-border-hover: #334155;
+    color-scheme: dark;
+}
+
+html.dark body {
+    background-color: #070b14;
+    color: #f8fafc;
+}
+
+html.dark header {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-color: #1e293b !important;
+}
+
+html.dark header h1 {
+    color: #ffffff !important;
+}
+
+html.dark #header-theme-toggle,
+html.dark header button:first-child {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .glass-panel {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f8fafc;
+}
+
+html.dark #view-home .bg-white {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+}
+
+html.dark #view-home #home-stat-balance,
+html.dark #view-home #home-stat-profit,
+html.dark #view-home #home-stat-tasks {
+    color: #ffffff !important;
+}
+
+html.dark #view-home .bg-\[\#ecfdf5\] {
+    background-color: rgba(6, 78, 59, 0.25) !important;
+    border-color: rgba(5, 150, 105, 0.35) !important;
+}
+
+html.dark #view-home #home-subs-count {
+    color: #ffffff !important;
+}
+
+html.dark .mobile-bottom-nav {
+    background: rgba(15, 23, 42, 0.96) !important;
+    border-color: #1e293b !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark .mobile-bottom-nav .nav-tab-btn {
+    color: #94a3b8 !important;
+}
+
+html.dark .mobile-bottom-nav .nav-tab-btn.active {
+    color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.15) !important;
+}
+
+html.dark h2, html.dark h3, html.dark h4 {
+    color: #ffffff !important;
+}
+
+/* ========================================================================= */
+/* ADMIN COMMAND CENTER - LIGHT & DARK MODE ENGINE */
+/* ========================================================================= */
+html:not(.dark) aside {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) aside h2,
+html:not(.dark) aside .text-white {
+    color: #0f172a !important;
+}
+
+html:not(.dark) aside .bg-slate-900 {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) main h2,
+html:not(.dark) main h3,
+html:not(.dark) main h4 {
+    color: #0f172a !important;
+}
+
+html:not(.dark) .glass-panel {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .glass-panel .text-white {
+    color: #0f172a !important;
+}
+
+html:not(.dark) table {
+    border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) th {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) td {
+    color: #1e293b !important;
+    border-color: #f1f5f9 !important;
+}
+
+html:not(.dark) tr:hover td {
+    background-color: #f8fafc !important;
+}
+
+html:not(.dark) input:not([type="checkbox"]),
+html:not(.dark) select,
+html:not(.dark) textarea {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+html:not(.dark) #admin-auth-guard {
+    background-color: rgba(248, 250, 252, 0.98) !important;
 }
 
 /* Custom Scrollbars */
@@ -48,28 +196,28 @@ body {
     height: 5px;
 }
 ::-webkit-scrollbar-track {
-    background: #070b14;
+    background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: #cbd5e1;
     border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #334155;
+    background: #94a3b8;
 }
 
-/* Glassmorphism Surface Cards */
+/* Clean Surface Cards */
 .glass-panel {
-    background: var(--color-surface);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--color-border);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
     border-radius: 1.25rem;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
-    border-color: var(--color-border-hover);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 }
 
 /* Digital Luxury Card (FinTech Visa/MasterCard styling) */

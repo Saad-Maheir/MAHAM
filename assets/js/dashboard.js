@@ -8,62 +8,13 @@ const Dashboard = (() => {
     let antiCheatInterval = null;
     let activeTaskSession = null;
 
-    // Authentic fallback tasks catalog for instant client presentation
-    const DEFAULT_TASKS = [
-        {
-            id: 1,
-            title: 'مشاهدة الفيديو التعريفي الرسمي لمنصة مهام',
-            description: 'شاهد العرض المرئي التوضيحي للخدمات المالية المعتمدة في العراق لمدة 30 ثانية لإضافة الربح فورياً.',
-            category: 'video',
-            target_url: 'https://www.youtube.com',
-            reward_amount: 250,
-            required_seconds: 30
-        },
-        {
-            id: 2,
-            title: 'متابعة قناة التحديثات والمسابقات الرسمية',
-            description: 'انضم إلى القناة الإخبارية الموثقة على تليجرام للاطلاع على أحدث الباقات الترويجية الاستثنائية.',
-            category: 'social',
-            target_url: 'https://t.me',
-            reward_amount: 250,
-            required_seconds: 30
-        },
-        {
-            id: 3,
-            title: 'استطلاع رأي وتقييم خدمات الدفع الإلكتروني',
-            description: 'المشاركة في استبيان سريع حول تجربة المحافظ الرقمية (زين كاش وآسيا حوالة وكي كارد) في العراق.',
-            category: 'survey',
-            target_url: 'https://google.com',
-            reward_amount: 250,
-            required_seconds: 30
-        },
-        {
-            id: 4,
-            title: 'زيارة بوابة الشركاء الماليين المعتمدين',
-            description: 'الاطلاع على قائمة المتاجر والمحافظ الشريكة وعروض تسوية الفواتير الحصرية للمشتركين.',
-            category: 'web',
-            target_url: 'https://google.iq',
-            reward_amount: 250,
-            required_seconds: 30
-        },
-        {
-            id: 5,
-            title: 'تقييم تطبيق المحفظة الرقمية الشريكة',
-            description: 'المساهمة في تقييم جودة وسرعة المعاملات المالية لحلول الدفع الإلكتروني المعتمدة محلياً.',
-            category: 'interactive',
-            target_url: 'https://zaincash.iq',
-            reward_amount: 250,
-            required_seconds: 30
-        }
-    ];
-
     /**
      * Load Dashboard Data and Render Interface
      */
     const load = async () => {
-        let user = { balance: 25000.0 };
-        let tier = { active_badge: 'الباقة الأساسية', daily_profit: 250.0 };
-        let tasks = DEFAULT_TASKS;
+        let user = { balance: 0.0 };
+        let tier = { active_badge: 'الباقة الأساسية', daily_profit: 250.0, task_reward_rate: 250.0, active_subscriptions_count: 0, active_subscriptions: [] };
+        let tasks = [];
         let userState = {
             is_vip: false,
             current_reward_per_task: 250.0,
@@ -82,103 +33,124 @@ const Dashboard = (() => {
 
             if (profileRes && profileRes.data && profileRes.data.user) {
                 user = profileRes.data.user;
-                tier = profileRes.data.tier;
+                tier = profileRes.data.tier || tier;
             }
 
             if (tasksRes && tasksRes.data && tasksRes.data.tasks) {
-                tasks = tasksRes.data.tasks.length > 0 ? tasksRes.data.tasks : DEFAULT_TASKS;
+                tasks = tasksRes.data.tasks;
                 userState = tasksRes.data.user_state || userState;
             }
         } catch (e) {
-            // Retain presentation defaults
+            // Unauthenticated or network error handled by App
         }
 
         renderBentoMetrics(user, tier, userState);
-        handleCooldownState(userState);
+        handleCooldownState(userState, tier);
         renderTasksList(tasks, userState);
     };
 
     /**
-     * Render Top Bento Cards
+     * Render 4 Clean 2x2 Bento Cards & Active Subscriptions Banner
+     * Real-time sync with database values and multi-tier cumulative earnings
      */
     const renderBentoMetrics = (user, tier, userState) => {
-        const balanceEl = document.getElementById('bento-total-balance');
-        const profitEl  = document.getElementById('bento-task-profit');
-        const tasksEl   = document.getElementById('bento-available-tasks');
-        const badgeEl   = document.getElementById('bento-tier-badge');
-        const dailyPotentialEl = document.getElementById('bento-daily-potential');
+        const balanceEl     = document.getElementById('home-stat-balance');
+        const timeEl        = document.getElementById('home-stat-time');
+        const timeSubEl     = document.getElementById('home-stat-time-sub');
+        const profitEl      = document.getElementById('home-stat-profit');
+        const tierSubEl     = document.getElementById('home-stat-tier-name');
+        const tasksEl       = document.getElementById('home-stat-tasks');
+        const tasksSubEl    = document.getElementById('home-stat-tasks-sub');
+        const subsCountEl   = document.getElementById('home-subs-count');
+        const dailyProfitEl = document.getElementById('home-daily-profit');
 
+        const isVipUser = Boolean(userState.is_vip || tier.is_vip);
+
+        // Card 1: Balance (Actual DB Balance)
         if (balanceEl) {
-            balanceEl.innerHTML = `
-                <span class="text-3xl font-black text-emerald-400 font-mono tracking-tight">
-                    ${Number(user.balance).toLocaleString('ar-IQ')}
-                </span>
-                <span class="currency-iqd text-emerald-500/80 font-bold mr-1.5">د.ع</span>
-            `;
+            balanceEl.textContent = Number(user.balance || 0).toLocaleString('ar-IQ');
         }
 
+        // Card 2: Time / Cooldown Status Placeholder (Synced with handleCooldownState)
+        const secondsLeft = (tier.cooldown_remaining_seconds !== undefined) 
+            ? tier.cooldown_remaining_seconds 
+            : (userState.cooldown_remaining_seconds || 0);
+
+        if (timeEl && secondsLeft <= 0) {
+            timeEl.textContent = 'جاهز !';
+            timeEl.className = 'text-2xl sm:text-3xl font-black text-emerald-500 font-mono tracking-tight';
+            if (timeSubEl) timeSubEl.textContent = 'متاح تنفيذ مهام الآن';
+        }
+
+        // Card 3: Task Profit (Cumulative Multi-Tier Rate)
+        const currentRewardRate = tier.task_reward_rate || tier.daily_profit || userState.current_reward_per_task || 250;
         if (profitEl) {
-            profitEl.innerHTML = `
-                <span class="text-2xl font-black text-white font-mono">
-                    ${Number(userState.current_reward_per_task).toLocaleString('ar-IQ')}
-                </span>
-                <span class="currency-iqd text-slate-400 font-semibold mr-1">د.ع</span>
-            `;
+            profitEl.textContent = Number(currentRewardRate).toLocaleString('ar-IQ');
+        }
+        if (tierSubEl) {
+            tierSubEl.textContent = tier.active_tier_name || 'الباقة الأساسية';
         }
 
+        // Card 4: Tasks Count (5 - used or ∞ for VIP)
         if (tasksEl) {
-            if (userState.is_vip) {
-                tasksEl.innerHTML = `
-                    <span class="text-2xl font-black text-amber-400">مفتوح (∞)</span>
-                    <span class="text-[11px] text-amber-400/80 block mt-0.5">مشترك VIP نشط</span>
-                `;
+            if (isVipUser) {
+                tasksEl.textContent = '∞';
+                tasksEl.className = 'text-3xl font-black text-slate-900 tracking-tight';
+                if (tasksSubEl) tasksSubEl.textContent = 'مهام يومية مفتوحة';
             } else {
-                tasksEl.innerHTML = `
-                    <span class="text-2xl font-black text-white font-mono">
-                        ${userState.free_tasks_remaining}
-                    </span>
-                    <span class="text-[11px] text-slate-400 block mt-0.5">من أصل 5 مهام</span>
-                `;
+                const remaining = (tier.free_tasks_remaining !== undefined && tier.free_tasks_remaining !== '∞')
+                    ? tier.free_tasks_remaining
+                    : (userState.free_tasks_remaining !== undefined ? userState.free_tasks_remaining : 5);
+                tasksEl.textContent = String(remaining);
+                tasksEl.className = 'text-3xl font-black text-slate-900 font-mono tracking-tight';
+                if (tasksSubEl) tasksSubEl.textContent = 'مهام مجانية متبقية';
             }
         }
 
-        if (badgeEl) {
-            const badgeColorClass = userState.is_vip ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800 text-slate-300 border-slate-700';
-            badgeEl.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badgeColorClass}`;
-            badgeEl.innerHTML = `
-                <span class="w-2 h-2 rounded-full ${userState.is_vip ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}"></span>
-                ${tier.active_badge || 'الباقة الأساسية'}
-            `;
-        }
+        // Active Subscriptions Box
+        const subsCount = (tier.active_subscriptions_count !== undefined)
+            ? tier.active_subscriptions_count
+            : (tier.active_subscriptions ? tier.active_subscriptions.length : (isVipUser ? 1 : 0));
 
-        if (dailyPotentialEl) {
-            dailyPotentialEl.innerHTML = `
-                إجمالي الربح اليومي المتوقع: 
-                <span class="font-bold text-emerald-400 font-mono">${Number(tier.daily_profit || 250).toLocaleString('ar-IQ')} د.ع</span>
-            `;
+        if (subsCountEl) {
+            subsCountEl.textContent = `${subsCount} باقة`;
+        }
+        if (dailyProfitEl) {
+            const daily = tier.daily_profit || currentRewardRate || 250;
+            dailyProfitEl.textContent = `${Number(daily).toLocaleString('ar-IQ')} د.ع`;
         }
     };
 
     /**
-     * Manage 24-Hour Server-Synced Cooldown Display
+     * Manage 24-Hour Server-Synced Cooldown Display (Applies to both Free & VIP)
      */
-    const handleCooldownState = (userState) => {
+    const handleCooldownState = (userState, tier) => {
         if (cooldownInterval) clearInterval(cooldownInterval);
 
-        const banner = document.getElementById('cooldown-banner');
-        const timerText = document.getElementById('cooldown-timer-clock');
+        const timeEl    = document.getElementById('home-stat-time');
+        const timeSubEl = document.getElementById('home-stat-time-sub');
 
-        if (!banner || !timerText) return;
+        let secondsLeft = 0;
+        if (tier && tier.cooldown_remaining_seconds !== undefined) {
+            secondsLeft = tier.cooldown_remaining_seconds;
+        } else if (userState && userState.cooldown_remaining_seconds !== undefined) {
+            secondsLeft = userState.cooldown_remaining_seconds;
+        }
 
-        let secondsLeft = userState.cooldown_remaining_seconds || 0;
-
-        if (secondsLeft > 0 && !userState.is_vip) {
-            banner.classList.remove('hidden');
+        if (secondsLeft > 0) {
+            if (timeEl) {
+                timeEl.className = 'text-2xl sm:text-3xl font-black text-amber-500 font-mono tracking-tight';
+            }
+            if (timeSubEl) timeSubEl.textContent = 'الوقت المتبقي للمهمة القادمة';
 
             const updateTimer = () => {
                 if (secondsLeft <= 0) {
                     clearInterval(cooldownInterval);
-                    banner.classList.add('hidden');
+                    if (timeEl) {
+                        timeEl.textContent = 'جاهز !';
+                        timeEl.className = 'text-2xl sm:text-3xl font-black text-emerald-500 font-mono tracking-tight';
+                    }
+                    if (timeSubEl) timeSubEl.textContent = 'متاح تنفيذ مهام الآن';
                     load();
                     return;
                 }
@@ -187,14 +159,18 @@ const Dashboard = (() => {
                 const m = Math.floor((secondsLeft % 3600) / 60).toString().padStart(2, '0');
                 const s = Math.floor(secondsLeft % 60).toString().padStart(2, '0');
 
-                timerText.textContent = `${h}:${m}:${s}`;
+                if (timeEl) timeEl.textContent = `${h}:${m}:${s}`;
                 secondsLeft--;
             };
 
             updateTimer();
             cooldownInterval = setInterval(updateTimer, 1000);
         } else {
-            banner.classList.add('hidden');
+            if (timeEl) {
+                timeEl.textContent = 'جاهز !';
+                timeEl.className = 'text-2xl sm:text-3xl font-black text-emerald-500 font-mono tracking-tight';
+            }
+            if (timeSubEl) timeSubEl.textContent = 'متاح تنفيذ مهام الآن';
         }
     };
 
@@ -204,9 +180,22 @@ const Dashboard = (() => {
      * Render Interactive Task Cards
      */
     const renderTasksList = (tasks, userState) => {
-        currentTasksCatalog = tasks || DEFAULT_TASKS;
+        currentTasksCatalog = tasks || [];
         const containerHome = document.getElementById('tasks-grid-container');
         const containerDedicated = document.getElementById('tasks-dedicated-grid-container');
+
+        if (!tasks || tasks.length === 0) {
+            const emptyHtml = `
+                <div class="col-span-full p-8 text-center glass-panel rounded-2xl border-dashed border-slate-700">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-800 flex items-center justify-center text-xl">📋</div>
+                    <h4 class="text-sm font-bold text-white mb-1">لا توجد مهام معتمدة حالياً</h4>
+                    <p class="text-xs text-slate-400">يقوم المشرف بإضافة وتوجيه المهام اليومية الجديدة. ستظهر مهامك هنا فور اعتمادها.</p>
+                </div>
+            `;
+            if (containerHome) containerHome.innerHTML = emptyHtml;
+            if (containerDedicated) containerDedicated.innerHTML = emptyHtml;
+            return;
+        }
 
         const canExecute = userState.can_execute_task !== false;
         const completedIds = userState.completed_task_ids_today || [];
@@ -299,21 +288,23 @@ const Dashboard = (() => {
      * Open Anti-Cheat Task Execution Modal
      */
     const openTaskModal = async (taskId) => {
-        const found = currentTasksCatalog.find(t => t.id === taskId) || DEFAULT_TASKS.find(t => t.id === taskId) || DEFAULT_TASKS[0];
-        let session = {
-            title: found.title,
-            target_url: found.target_url,
-            required_seconds: 30,
-            token: 'client_preview_' + Date.now()
-        };
+        const found = currentTasksCatalog.find(t => Number(t.id) === Number(taskId));
+        if (!found) {
+            App.toast('المهمة المطلوبة غير متوفرة حالياً.', 'error');
+            return;
+        }
 
+        let session = null;
         try {
-            const res = await API.post('tasks/start', { task_id: taskId });
+            const res = await API.post('tasks/start', { task_id: Number(taskId) });
             if (res && res.data) {
                 session = res.data;
+            } else {
+                throw new Error(res.message || 'تعذر بدء المهمة.');
             }
         } catch (e) {
-            // Graceful preview session
+            App.toast(e.message || 'نظام التبريد نشط أو تعذر بدء المهمة.', 'error');
+            return;
         }
 
         activeTaskSession = session;
@@ -393,7 +384,7 @@ const Dashboard = (() => {
     };
 
     /**
-     * Submit Reward Claim
+     * Submit Reward Claim - Real-time Balance & 24h Cooldown Sync
      */
     const handleClaimReward = async () => {
         const claimBtn = document.getElementById('task-claim-btn');
@@ -403,16 +394,20 @@ const Dashboard = (() => {
         }
 
         try {
-            if (activeTaskSession && !activeTaskSession.token.startsWith('client_preview_')) {
-                await API.post('tasks/claim', { token: activeTaskSession.token });
-            }
-            App.toast('تهانينا! تم التحقق من إنجاز المهمة وإضافة 250 د.ع لمحفظتك.', 'success');
+            const token = activeTaskSession ? activeTaskSession.token : '';
+            const res = await API.post('tasks/claim', { token: token });
+            App.toast(res.message || 'تهانينا! تم التحقق من إنجاز المهمة وإضافة الربح لمحفظتك.', 'success');
             closeTaskModal();
-            load();
+            
+            // Immediate real-time sync across dashboard
+            await load();
+            App.navigate('home');
         } catch (err) {
-            App.toast('تهانينا! تم استلام مكافأة المهمة بنجاح.', 'success');
-            closeTaskModal();
-            load();
+            App.toast(err.message || 'فشلت معالجة استلام مكافأة المهمة.', 'error');
+            if (claimBtn) {
+                claimBtn.disabled = false;
+                claimBtn.innerHTML = `<span>إعادة محاولة استلام الربح</span>`;
+            }
         }
     };
 

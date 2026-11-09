@@ -13,27 +13,42 @@ require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class TaskController {
     /**
+     * Retrieve Available Tasks and User Execution State (listTasks alias)
+     */
+    public static function listTasks(): void {
+        self::getTasks();
+    }
+
+    /**
      * Retrieve Available Tasks and User Execution State
      */
     public static function getTasks(): void {
         $user = AuthMiddleware::authenticate();
         $pdo  = Database::getConnection();
 
-        // 1. Check active VIP subscriptions
+        // 1. Fetch active VIP subscriptions (Cumulative Multi-Tier Logic)
         $subStmt = $pdo->prepare("
             SELECT s.id, s.package_id, s.daily_profit_rate, p.name as package_name, p.code as package_code
             FROM user_subscriptions s
             JOIN packages p ON s.package_id = p.id
             WHERE s.user_id = :user_id AND s.status = 'active' AND s.expires_at > NOW()
             ORDER BY p.price DESC
-            LIMIT 1
         ");
         $subStmt->execute(['user_id' => $user['id']]);
-        $activeSub = $subStmt->fetch();
+        $activeSubs = $subStmt->fetchAll();
 
-        $isVip = ($activeSub !== false);
+        $activeSubsCount = count($activeSubs);
+        $isVip = ($activeSubsCount > 0);
 
-        // 2. Compute 24-Hour Cooldown and Task Quota for Free Tier
+        $vipDailySum = 0.0;
+        foreach ($activeSubs as $s) {
+            $vipDailySum += (float)$s['daily_profit_rate'];
+        }
+
+        // Cumulative Reward Rate: Base 250 IQD + sum of active VIP tiers
+        $taskRewardRate = $isVip ? (250.0 + $vipDailySum) : 250.0;
+
+        // 2. Compute 24-Hour Cooldown (Applies to both Free and VIP)
         $freeLimit = 5;
         $freeUsed  = (int)$user['free_tasks_used'];
         $freeRemaining = max(0, $freeLimit - $freeUsed);
@@ -41,7 +56,7 @@ class TaskController {
         $cooldownRemainingSeconds = 0;
         $nextAvailableAt = null;
 
-        if (!$isVip && $user['last_task_completed_at'] !== null) {
+        if (!empty($user['last_task_completed_at'])) {
             $lastCompletedTimestamp = strtotime($user['last_task_completed_at']);
             $requiredCooldownSeconds = 24 * 3600; // Strict 24 hours
             $elapsedSeconds = time() - $lastCompletedTimestamp;
@@ -52,14 +67,19 @@ class TaskController {
             }
         }
 
-        $canExecute = $isVip ? true : ($freeRemaining > 0 && $cooldownRemainingSeconds === 0);
+        // Execution readiness check
+        if ($isVip) {
+            $canExecute = ($cooldownRemainingSeconds === 0);
+        } else {
+            $canExecute = ($freeRemaining > 0 && $cooldownRemainingSeconds === 0);
+        }
 
-        // 3. Fetch active tasks catalog (Filtered for 'all' and tasks specifically assigned to this user)
+        // 3. Fetch active tasks catalog (Strict isolation: All public tasks + tasks specific to this authenticated user only)
         $taskStmt = $pdo->prepare("
             SELECT id, title, description, category, target_url, attachment_url, target_type, target_user_id, reward_amount, required_seconds, min_vip_level
             FROM tasks
             WHERE is_active = 1
-              AND (target_type = 'all' OR target_user_id = :user_id)
+              AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id))
             ORDER BY id DESC
         ");
         $taskStmt->execute(['user_id' => $user['id']]);
@@ -80,10 +100,12 @@ class TaskController {
             'tasks' => $tasks,
             'user_state' => [
                 'is_vip'                     => $isVip,
-                'active_package'             => $activeSub ? $activeSub['package_name'] : 'الباقة الأساسية المجانية',
-                'current_reward_per_task'    => $isVip ? (float)$activeSub['daily_profit_rate'] : 250.00,
+                'active_subscriptions_count' => $activeSubsCount,
+                'active_package'             => $isVip ? ($activeSubs[0]['package_name'] . ($activeSubsCount > 1 ? " (+{$activeSubsCount} باقات)" : '')) : 'الباقة الأساسية المجانية',
+                'current_reward_per_task'    => $taskRewardRate,
                 'free_tasks_used'            => $freeUsed,
-                'free_tasks_remaining'       => $freeRemaining,
+                'free_tasks_remaining'       => $isVip ? '∞' : $freeRemaining,
+                'tasks_display'              => $isVip ? '∞' : (string)$freeRemaining,
                 'cooldown_remaining_seconds' => $cooldownRemainingSeconds,
                 'next_available_at'          => $nextAvailableAt,
                 'can_execute_task'           => $canExecute,
@@ -114,35 +136,41 @@ class TaskController {
             Response::error('المهمة المطلوبة غير متوفرة حالياً.');
         }
 
-        // Check active VIP subscription
+        // Fetch active VIP subscriptions (Cumulative)
         $subStmt = $pdo->prepare("
-            SELECT s.id, s.package_id, s.daily_profit_rate, p.name as package_name
+            SELECT s.package_id, s.daily_profit_rate
             FROM user_subscriptions s
-            JOIN packages p ON s.package_id = p.id
             WHERE s.user_id = :user_id AND s.status = 'active' AND s.expires_at > NOW()
-            LIMIT 1
         ");
         $subStmt->execute(['user_id' => $user['id']]);
-        $activeSub = $subStmt->fetch();
-        $isVip = ($activeSub !== false);
+        $activeSubs = $subStmt->fetchAll();
+        $isVip = count($activeSubs) > 0;
 
-        // Enforce Free Tier Constraints
-        if (!$isVip) {
-            if ((int)$user['free_tasks_used'] >= 5) {
-                Response::error('لقد استنفذت كامل حصة المهام المجانية (5 مهام). يرجى الترقية إلى إحدى باقات VIP لمتابعة الأرباح.');
-            }
-
-            if ($user['last_task_completed_at'] !== null) {
-                $elapsed = time() - strtotime($user['last_task_completed_at']);
-                $cooldown = 24 * 3600;
-                if ($elapsed < $cooldown) {
-                    $remaining = $cooldown - $elapsed;
-                    $hours = floor($remaining / 3600);
-                    $minutes = floor(($remaining % 3600) / 60);
-                    Response::error("نظام التبريد نشط. يمكنك إنجاز المهمة القادمة بعد {$hours} ساعة و {$minutes} دقيقة.");
-                }
+        // Check 24-Hour Cooldown for All Users
+        if (!empty($user['last_task_completed_at'])) {
+            $elapsed = time() - strtotime($user['last_task_completed_at']);
+            $cooldown = 24 * 3600;
+            if ($elapsed < $cooldown) {
+                $remaining = $cooldown - $elapsed;
+                $hours = floor($remaining / 3600);
+                $minutes = floor(($remaining % 3600) / 60);
+                Response::error("نظام التبريد نشط! يمكنك إنجاز المهمة القادمة بعد {$hours} ساعة و {$minutes} دقيقة.", 422, [
+                    'cooldown_remaining_seconds' => $remaining
+                ]);
             }
         }
+
+        // Enforce Free Tier Quota (5 tasks maximum)
+        if (!$isVip && (int)$user['free_tasks_used'] >= 5) {
+            Response::error('لقد استنفدت كامل حصة المهام المجانية (5 مهام). يرجى الاشتراك في إحدى باقات VIP لمتابعة الأرباح.', 422);
+        }
+
+        // Calculate Cumulative Reward Amount
+        $vipDailySum = 0.0;
+        foreach ($activeSubs as $s) {
+            $vipDailySum += (float)$s['daily_profit_rate'];
+        }
+        $rewardAmount = $isVip ? (250.0 + $vipDailySum) : 250.0;
 
         // Generate Cryptographic Verification Token
         $verificationToken = bin2hex(random_bytes(32));
@@ -157,8 +185,9 @@ class TaskController {
             'token'            => $verificationToken,
             'started_at'       => time(),
             'required_seconds' => $requiredSeconds,
-            'package_id'       => $isVip ? (int)$activeSub['package_id'] : null,
-            'reward_amount'    => $isVip ? (float)$activeSub['daily_profit_rate'] : (float)$task['reward_amount']
+            'package_id'       => $isVip ? (int)$activeSubs[0]['package_id'] : null,
+            'reward_amount'    => $rewardAmount,
+            'is_vip'           => $isVip
         ];
 
         Response::success('تم بدء المهمة وتفعيل عداد التحقق الأمني بنجاح.', [
@@ -196,16 +225,15 @@ class TaskController {
             Response::error("لم تنتهِ مدة التحقق الأمنية بعد! يرجى الانتظار {$remaining} ثانية إضافية قبل تأكيد الربح.", 422);
         }
 
-        $taskId       = (int)$activeSessionTask['task_id'];
-        $rewardAmount = (float)$activeSessionTask['reward_amount'];
-        $packageId    = $activeSessionTask['package_id'];
+        $taskId    = (int)$activeSessionTask['task_id'];
+        $packageId = $activeSessionTask['package_id'];
 
         $pdo = Database::getConnection();
 
         // 2. Atomic Database Transaction with Row Locking (FOR UPDATE)
         $pdo->beginTransaction();
         try {
-            // Lock user row against race condition (double clicking claim)
+            // Lock user row against race conditions
             $userLockStmt = $pdo->prepare("SELECT id, balance, free_tasks_used, last_task_completed_at FROM users WHERE id = :id FOR UPDATE");
             $userLockStmt->execute(['id' => $user['id']]);
             $lockedUser = $userLockStmt->fetch();
@@ -214,33 +242,43 @@ class TaskController {
                 throw new RuntimeException("المستخدم غير موجود.");
             }
 
-            // Check if user is VIP
-            $subStmt = $pdo->prepare("
-                SELECT id FROM user_subscriptions 
-                WHERE user_id = :user_id AND status = 'active' AND expires_at > NOW() 
-                LIMIT 1
-            ");
-            $subStmt->execute(['user_id' => $user['id']]);
-            $hasVip = ($subStmt->fetch() !== false);
-
-            // Re-verify 24h Cooldown for Free Tier inside the atomic lock
-            if (!$hasVip) {
-                if ((int)$lockedUser['free_tasks_used'] >= 5) {
-                    throw new RuntimeException("تم استنفاد جميع المهام المجانية المتاحة لهذا الحساب.");
-                }
-
-                if ($lockedUser['last_task_completed_at'] !== null) {
-                    $cooldownElapsed = time() - strtotime($lockedUser['last_task_completed_at']);
-                    if ($cooldownElapsed < (24 * 3600)) {
-                        throw new RuntimeException("نظام التبريد نشط في الوقت الحالي.");
-                    }
+            // Check 24h Cooldown for All Users inside the atomic lock
+            if (!empty($lockedUser['last_task_completed_at'])) {
+                $cooldownElapsed = time() - strtotime($lockedUser['last_task_completed_at']);
+                $requiredCooldown = 24 * 3600;
+                if ($cooldownElapsed < $requiredCooldown) {
+                    $remainingSec = $requiredCooldown - $cooldownElapsed;
+                    $remainingMin = ceil($remainingSec / 60);
+                    throw new RuntimeException("نظام التبريد نشط في الوقت الحالي! يتبقى {$remainingMin} دقيقة حتى موعد المهمة التالية.");
                 }
             }
+
+            // Fetch active user subscriptions for exact cumulative reward calculation
+            $subStmt = $pdo->prepare("
+                SELECT package_id, daily_profit_rate
+                FROM user_subscriptions 
+                WHERE user_id = :user_id AND status = 'active' AND expires_at > NOW() 
+            ");
+            $subStmt->execute(['user_id' => $user['id']]);
+            $activeSubs = $subStmt->fetchAll();
+            $isVip = count($activeSubs) > 0;
+
+            // Enforce free tier limits inside the lock
+            if (!$isVip && (int)$lockedUser['free_tasks_used'] >= 5) {
+                throw new RuntimeException("تم استنفاد جميع المهام المجانية المتاحة لهذا الحساب. يرجى الاشتراك في إحدى باقات VIP.");
+            }
+
+            // Calculate Cumulative Reward Amount
+            $vipDailySum = 0.0;
+            foreach ($activeSubs as $s) {
+                $vipDailySum += (float)$s['daily_profit_rate'];
+            }
+            $rewardAmount = $isVip ? (250.0 + $vipDailySum) : 250.0;
 
             $currentBalance = (float)$lockedUser['balance'];
             $newBalance     = $currentBalance + $rewardAmount;
 
-            // Record task completion
+            // Record task completion in audit log
             $compStmt = $pdo->prepare("
                 INSERT INTO task_completions (user_id, task_id, package_id, reward_earned, started_at, completed_at, duration_seconds, verification_token, status)
                 VALUES (:user_id, :task_id, :package_id, :reward, :started_at, NOW(), :duration, :token, 'verified')
@@ -255,7 +293,7 @@ class TaskController {
                 'token'      => $token
             ]);
 
-            // Record financial transaction
+            // Record double-entry financial transaction in ledger
             $txUuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
                 mt_rand(0, 0xffff), mt_rand(0, 0xffff),
                 mt_rand(0, 0xffff),
@@ -276,8 +314,8 @@ class TaskController {
                 'after'   => $newBalance
             ]);
 
-            // Update user balance & cooldown records
-            if (!$hasVip) {
+            // Update user balance & 24h cooldown timer
+            if (!$isVip) {
                 $updUser = $pdo->prepare("
                     UPDATE users 
                     SET balance = :new_balance, 
@@ -304,14 +342,18 @@ class TaskController {
 
             $pdo->commit();
 
-            // Clear session state
+            // Clear session task state
             unset($_SESSION['active_task']);
 
-            Response::success('تهانينا! تم التحقق من إنجاز المهمة بنجاح وإضافة الربح إلى محفظتك.', [
+            $newFreeUsed = (int)$lockedUser['free_tasks_used'] + 1;
+
+            Response::success('تهانينا! تم استلام أرباح المهمة بنجاح وإضافتها إلى رصيدك.', [
                 'reward_earned'              => $rewardAmount,
                 'new_balance'                => $newBalance,
-                'cooldown_remaining_seconds' => $hasVip ? 0 : (24 * 3600),
-                'tasks_remaining'            => $hasVip ? '∞' : max(0, 5 - ((int)$lockedUser['free_tasks_used'] + 1))
+                'cooldown_remaining_seconds' => 24 * 3600,
+                'tasks_remaining'            => $isVip ? '∞' : max(0, 5 - $newFreeUsed),
+                'tasks_display'              => $isVip ? '∞' : (string)max(0, 5 - $newFreeUsed),
+                'is_ready'                   => false
             ]);
         } catch (Exception $e) {
             $pdo->rollBack();

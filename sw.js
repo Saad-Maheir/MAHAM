@@ -1,32 +1,35 @@
 /**
- * MAHAM FinTech Platform - Service Worker (PWA Shell Cacher)
- * Offline-resilient cache management for fast mobile rendering
+ * MAHAM FinTech Platform - Service Worker (Strict Network-First Strategy)
+ * Cache-busting & Instant Live Updates Pipeline for Desktop & Mobile
  */
 
-const CACHE_NAME = 'maham-v2.2.0';
+const CACHE_NAME = 'maham-fintech-v2.4.0';
 const STATIC_ASSETS = [
     './',
     './index.html',
-    './assets/css/app.css',
-    './assets/js/api.js',
-    './assets/js/auth.js',
-    './assets/js/dashboard.js',
-    './assets/js/wallet.js',
-    './assets/js/subscriptions.js',
-    './assets/js/app.js',
+    './admin.html',
+    './assets/css/app.css?v=2.4.0',
+    './assets/js/api.js?v=2.4.0',
+    './assets/js/auth.js?v=2.4.0',
+    './assets/js/dashboard.js?v=2.4.0',
+    './assets/js/wallet.js?v=2.4.0',
+    './assets/js/subscriptions.js?v=2.4.0',
+    './assets/js/app.js?v=2.4.0',
     './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
+    // Force immediate activation without waiting
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(STATIC_ASSETS);
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 
 self.addEventListener('activate', (event) => {
-    // Purge all legacy caches immediately
+    // Purge all legacy caches immediately and take control of all clients
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
@@ -43,13 +46,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Bypass API calls from cache to maintain strict real-time financial integrity
+    // 1. Strictly bypass API calls from cache to maintain absolute real-time data
     if (url.pathname.includes('/api/')) {
         event.respondWith(fetch(event.request));
         return;
     }
 
-    // Network-First strategy: Always fetch fresh assets, fallback to cache if offline
+    // 2. Strict Network-First strategy: Always request live server assets first
     event.respondWith(
         fetch(event.request)
             .then((networkResponse) => {
@@ -60,6 +63,7 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             })
             .catch(() => {
+                // Offline fallback to cache only when network fails
                 return caches.match(event.request);
             })
     );

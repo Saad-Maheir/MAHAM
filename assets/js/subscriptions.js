@@ -24,74 +24,92 @@ const Subscriptions = (() => {
                 {
                     id: 1,
                     code: 'free',
-                    name: 'الباقة المجانية الأساسية',
-                    badge_name: 'عضوية البداية',
-                    price_iqd: 0,
-                    profit_per_task: 250,
-                    tasks_per_day: 1,
-                    duration_days: 0,
-                    description: 'باقة مجانية تلقائية تمنحك 5 مهام تأسيسية بقيمة 250 د.ع لكل مهمة (مهمة واحدة كل 24 ساعة).',
-                    is_active_tier: true
+                    name: 'الباقة الأساسية المجانية',
+                    badge_name: 'المجانية',
+                    badge_color: 'slate',
+                    price: 0,
+                    daily_profit: 250,
+                    tasks_limit: 5,
+                    tasks_display: '5 مهام إجمالاً',
+                    duration_days: 365,
+                    description: 'باقة الانطلاق المجانية - إجمالي 5 مهام مدى الحياة مع فاصل زمني 24 ساعة بين كل مهمة.',
+                    is_active_tier: true,
+                    expires_at: null
                 },
                 {
                     id: 2,
                     code: 'vip_1',
-                    name: 'VIP 1 — الباقة البرونزية',
-                    badge_name: 'VIP 1',
-                    price_iqd: 15000,
-                    profit_per_task: 1000,
-                    tasks_per_day: 1,
+                    name: 'الباقة الأولى (VIP 1)',
+                    badge_name: 'برونزية VIP 1',
+                    badge_color: 'amber',
+                    price: 25000,
+                    daily_profit: 250,
+                    tasks_limit: null,
+                    tasks_display: 'مفتوح (∞)',
                     duration_days: 30,
-                    description: 'استثمار تمهيدي يمنحك مهام يومية مستمرة بأرباح يومية تبلغ 1,000 د.ع وتراكم أرباح شهري 30,000 د.ع.',
-                    is_active_tier: false
+                    description: 'اشتراك شهري استثماري - ربح يومي ثابت 250 د.ع مع مهام يومية مفتوحة (∞).',
+                    is_active_tier: false,
+                    expires_at: null
                 },
                 {
                     id: 3,
                     code: 'vip_2',
-                    name: 'VIP 2 — الباقة الفضية',
-                    badge_name: 'VIP 2',
-                    price_iqd: 35000,
-                    profit_per_task: 2500,
-                    tasks_per_day: 1,
+                    name: 'الباقة الثانية (VIP 2)',
+                    badge_name: 'فضية VIP 2',
+                    badge_color: 'slate',
+                    price: 50000,
+                    daily_profit: 500,
+                    tasks_limit: null,
+                    tasks_display: 'مفتوح (∞)',
                     duration_days: 30,
-                    description: 'باقة فضية بمعدل ربح 2,500 د.ع يومياً وأرباح شهرية تراكمية تصل إلى 75,000 د.ع وسحب أسبوعي فوري.',
-                    is_active_tier: false
+                    description: 'اشتراك شهري مميز - ربح يومي ثابت 500 د.ع مع مهام يومية مفتوحة (∞).',
+                    is_active_tier: false,
+                    expires_at: null
                 },
                 {
                     id: 4,
                     code: 'vip_3',
-                    name: 'VIP 3 — الباقة الذهبية',
-                    badge_name: 'VIP 3 Gold',
-                    price_iqd: 75000,
-                    profit_per_task: 6000,
-                    tasks_per_day: 1,
+                    name: 'الباقة الثالثة (VIP 3)',
+                    badge_name: 'ذهبية VIP 3',
+                    badge_color: 'yellow',
+                    price: 100000,
+                    daily_profit: 1000,
+                    tasks_limit: null,
+                    tasks_display: 'مفتوح (∞)',
                     duration_days: 30,
-                    description: 'الباقة الأكثر طلباً واستثماراً. تحقق ربحاً يومياً 6,000 د.ع بإجمالي أرباح شهرية تبلغ 180,000 د.ع.',
-                    is_active_tier: false
+                    description: 'اشتراك المحترفين المتقدم - ربح يومي ثابت 1,000 د.ع مع مهام يومية مفتوحة (∞).',
+                    is_active_tier: false,
+                    expires_at: null
                 },
                 {
                     id: 5,
                     code: 'vip_4',
-                    name: 'VIP 4 — الباقة البلاتينية',
-                    badge_name: 'VIP 4 Platinum',
-                    price_iqd: 150000,
-                    profit_per_task: 13000,
-                    tasks_per_day: 1,
+                    name: 'الباقة الرابعة (VIP 4)',
+                    badge_name: 'بلاتينية VIP 4',
+                    badge_color: 'cyan',
+                    price: 200000,
+                    daily_profit: 2000,
+                    tasks_limit: null,
+                    tasks_display: 'مفتوح (∞)',
                     duration_days: 30,
-                    description: 'باقة مخصصة للمستثمرين المتقدمين بربح يومي 13,000 د.ع وأرباح شهرية تقدر بـ 390,000 د.ع.',
-                    is_active_tier: false
+                    description: 'اشتراك كبار المستثمرين - ربح يومي ثابت 2,000 د.ع مع مهام يومية مفتوحة (∞).',
+                    is_active_tier: false,
+                    expires_at: null
                 },
                 {
                     id: 6,
                     code: 'vip_5',
-                    name: 'VIP 5 — باقة النخبة الماسية',
-                    badge_name: 'VIP 5 Diamond',
-                    price_iqd: 300000,
-                    profit_per_task: 28000,
-                    tasks_per_day: 1,
+                    name: 'الباقة الخامسة (VIP 5)',
+                    badge_name: 'ماسية VIP 5',
+                    badge_color: 'emerald',
+                    price: 400000,
+                    daily_profit: 4000,
+                    tasks_limit: null,
+                    tasks_display: 'مفتوح (∞)',
                     duration_days: 30,
-                    description: 'أعلى باقة استثمارية وحصرية. تحقق ربحاً يومياً 28,000 د.ع بإجمالي أرباح شهرية 840,000 د.ع مع معالجة سحب فائقة السرعة.',
-                    is_active_tier: false
+                    description: 'اشتراك النخبة الاستثنائي - ربح يومي ثابت 4,000 د.ع مع مهام يومية مفتوحة (∞).',
+                    is_active_tier: false,
+                    expires_at: null
                 }
             ];
             currentBalance = 0;
@@ -290,6 +308,9 @@ const Subscriptions = (() => {
 
             App.toast(res.message, 'success');
             closeConfirmModal();
+            if (typeof Dashboard !== 'undefined' && Dashboard.load) {
+                await Dashboard.load();
+            }
             App.navigate('home');
         } catch (err) {
             App.toast(err.message, 'error');

@@ -3,6 +3,73 @@
  * Executive Analytics, Deposit/Withdrawal Queues, Task & User Management
  */
 
+// Standalone Toast Notification System for Admin Command Center
+const adminToast = (message, type = 'info') => {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toastEl = document.createElement('div');
+    toastEl.className = 'toast-item';
+
+    let iconSvg = '';
+    let borderColor = 'border-slate-700';
+
+    if (type === 'success') {
+        borderColor = 'border-emerald-500/40';
+        iconSvg = `
+            <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        `;
+    } else if (type === 'error') {
+        borderColor = 'border-rose-500/40';
+        iconSvg = `
+            <div class="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+        `;
+    } else {
+        borderColor = 'border-sky-500/40';
+        iconSvg = `
+            <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        `;
+    }
+
+    toastEl.style.borderColor = borderColor;
+    toastEl.innerHTML = `
+        ${iconSvg}
+        <div class="text-xs font-bold text-slate-100 flex-1 leading-relaxed">
+            ${message}
+        </div>
+    `;
+
+    container.appendChild(toastEl);
+
+    setTimeout(() => {
+        toastEl.style.opacity = '0';
+        toastEl.style.transform = 'translateY(-10px)';
+        toastEl.style.transition = 'all 0.3s ease';
+        setTimeout(() => toastEl.remove(), 300);
+    }, 3500);
+};
+
+// Guarantee window.App and App.toast are available everywhere in admin
+window.App = window.App || {};
+window.App.toast = adminToast;
+
 const Admin = (() => {
     let currentAdmin = null;
     let selectedDeposit = null;
@@ -12,9 +79,44 @@ const Admin = (() => {
      * Admin Initialization
      */
     const init = async () => {
+        initTheme();
         await API.initCsrf();
         await checkAdminAuth();
         loadAnalytics();
+    };
+
+    /**
+     * Theme Initialization & Toggle System for Admin Command Center
+     */
+    const initTheme = () => {
+        const savedTheme = localStorage.getItem('maham_theme') || 'light';
+        applyTheme(savedTheme);
+    };
+
+    const toggleTheme = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        const newTheme = isDark ? 'light' : 'dark';
+        applyTheme(newTheme);
+        localStorage.setItem('maham_theme', newTheme);
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast(`تم التبديل إلى ${newTheme === 'dark' ? 'الوضع الليلي' : 'الوضع النهاري'} بنجاح.`, 'info');
+        }
+    };
+
+    const applyTheme = (theme) => {
+        const html = document.documentElement;
+        const icon = document.getElementById('header-theme-icon');
+        const label = document.getElementById('profile-theme-label');
+
+        if (theme === 'dark') {
+            html.classList.add('dark');
+            if (icon) icon.textContent = '☀️';
+            if (label) label.textContent = 'الوضع الليلي';
+        } else {
+            html.classList.remove('dark');
+            if (icon) icon.textContent = '🌙';
+            if (label) label.textContent = 'الوضع النهاري';
+        }
     };
 
     /**
@@ -178,7 +280,34 @@ const Admin = (() => {
                 return;
             }
 
-            tbody.innerHTML = deposits.map(dep => `
+            tbody.innerHTML = deposits.map(dep => {
+                const isAsiacell = dep.payment_method === 'asiacell';
+                const methodBadge = isAsiacell ? `
+                    <span class="px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold text-xs inline-block">
+                        كارت آسيا سيل
+                    </span>
+                    <div class="mt-1.5 p-1.5 rounded-lg bg-slate-900 border border-purple-500/30 flex items-center justify-between gap-1.5">
+                        <span class="font-mono font-black text-amber-300 text-xs tracking-widest">${dep.tx_reference}</span>
+                        <button type="button" onclick="navigator.clipboard.writeText('${dep.tx_reference}'); App.toast('تم نسخ رقم كارت آسيا سيل', 'success')" class="px-2 py-0.5 rounded bg-purple-600/30 text-purple-200 text-[10px] font-bold shrink-0">
+                            نسخ الكارت
+                        </button>
+                    </div>
+                ` : `
+                    <span class="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs inline-block">
+                        ماستر كارد (MasterCard)
+                    </span>
+                    <div class="text-[11px] text-slate-400 mt-1 font-mono">مرجع: ${dep.tx_reference}</div>
+                `;
+
+                const receiptCell = (isAsiacell || !dep.receipt_image) ? `
+                    <span class="px-2 py-1 rounded bg-slate-800 text-[11px] text-slate-400">شحن رقمي مباشر</span>
+                ` : `
+                    <button onclick="Admin.inspectReceipt('${dep.receipt_image}', '${dep.tx_reference}', ${dep.amount}, ${dep.id})" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition">
+                        معاينة الإشعار
+                    </button>
+                `;
+
+                return `
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
                         <div>${dep.user_name}</div>
@@ -188,15 +317,10 @@ const Admin = (() => {
                         ${Number(dep.amount).toLocaleString('ar-IQ')} د.ع
                     </td>
                     <td class="py-3 px-4 text-xs text-slate-300">
-                        <span class="px-2 py-0.5 rounded bg-slate-800 font-mono">${dep.payment_method}</span>
-                        <div class="text-[11px] text-slate-400 mt-1 font-mono">مرجع: ${dep.tx_reference}</div>
+                        ${methodBadge}
                     </td>
                     <td class="py-3 px-4 text-center">
-                        ${dep.receipt_image ? `
-                            <button onclick="Admin.inspectReceipt('${dep.receipt_image}', '${dep.tx_reference}', ${dep.amount}, ${dep.id})" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition">
-                                عرض الإشعار
-                            </button>
-                        ` : '<span class="text-slate-500 text-xs">—</span>'}
+                        ${receiptCell}
                     </td>
                     <td class="py-3 px-4 text-slate-400 font-mono text-xs">
                         ${dep.created_at.substring(0, 16)}
@@ -205,7 +329,7 @@ const Admin = (() => {
                         ${dep.status === 'pending' ? `
                             <div class="flex items-center gap-1.5 justify-end">
                                 <button onclick="Admin.approveDeposit(${dep.id}, ${dep.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition">
-                                    قبول
+                                    تأكيد وإضافة الرصيد
                                 </button>
                                 <button onclick="Admin.rejectDepositPrompt(${dep.id})" class="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-bold text-xs transition">
                                     رفض
@@ -218,7 +342,8 @@ const Admin = (() => {
                         `}
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         } catch (e) {
             App.toast('تعذر جلب طابور الإيداعات.', 'error');
         }
@@ -295,14 +420,21 @@ const Admin = (() => {
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
                         <div>${w.user_name}</div>
-                        <div class="text-[11px] text-slate-400 font-mono">${w.user_email}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">${w.user_phone || w.user_email}</div>
                     </td>
                     <td class="py-3 px-4 text-amber-400 font-mono font-bold text-sm">
                         ${Number(w.amount).toLocaleString('ar-IQ')} د.ع
                     </td>
                     <td class="py-3 px-4 text-xs text-slate-300">
-                        <span class="px-2 py-0.5 rounded bg-slate-800 font-mono">${w.payment_method}</span>
-                        <div class="text-[12px] text-slate-200 font-mono font-bold mt-1 tracking-wider">${w.receiver_account}</div>
+                        <span class="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs inline-block">
+                            ماستر كارد (MasterCard)
+                        </span>
+                        <div class="mt-1.5 p-2 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between gap-2">
+                            <span class="font-mono font-black text-white text-xs tracking-wider">💳 ${w.receiver_account}</span>
+                            <button type="button" onclick="navigator.clipboard.writeText('${w.receiver_account}'); App.toast('تم نسخ رقم بطاقة الماستر كارد بنجاح', 'success')" class="px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300 text-[10px] font-bold shrink-0">
+                                نسخ البطاقة
+                            </button>
+                        </div>
                     </td>
                     <td class="py-3 px-4 text-slate-400 font-mono text-xs">
                         ${w.created_at.substring(0, 16)}
@@ -310,16 +442,16 @@ const Admin = (() => {
                     <td class="py-3 px-4 text-left">
                         ${w.status === 'pending' ? `
                             <div class="flex items-center gap-1.5 justify-end">
-                                <button onclick="Admin.approveWithdrawal(${w.id}, ${w.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition">
-                                    تأكيد الصرف
+                                <button onclick="Admin.approveWithdrawal(${w.id}, ${w.amount})" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition">
+                                    تأكيد تم التحويل
                                 </button>
-                                <button onclick="Admin.rejectWithdrawalPrompt(${w.id}, ${w.amount})" class="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-bold text-xs transition">
+                                <button onclick="Admin.rejectWithdrawalPrompt(${w.id}, ${w.amount})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-bold text-xs transition">
                                     رفض وإرجاع
                                 </button>
                             </div>
                         ` : `
                             <span class="px-2.5 py-1 rounded-full text-xs font-bold ${w.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-                                ${w.status === 'approved' ? 'تم الصرف' : 'مرفوض'}
+                                ${w.status === 'approved' ? 'تم التحويل والصرف' : 'مرفوض'}
                             </span>
                         `}
                     </td>
@@ -662,6 +794,8 @@ const Admin = (() => {
 
     return {
         init,
+        initTheme,
+        toggleTheme,
         handleAdminLogin,
         handleLogout,
         switchSection,

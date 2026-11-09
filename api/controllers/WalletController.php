@@ -1,7 +1,8 @@
 <?php
 /**
  * MAHAM FinTech Platform - Wallet & Financial Accounting Controller
- * Manual Deposits, Secure Receipts Storage, Atomic Withdrawals, Ledger Audit
+ * Manual Deposits (Asiacell 14-digit Cards & MasterCard Transfers), Anti-Fraud Card Lock,
+ * Exclusive MasterCard Withdrawals with Row-Level Atomic Locking, Real-time Alerts Engine
  */
 
 declare(strict_types=1);
@@ -36,25 +37,23 @@ class WalletController {
         $aggStmt->execute(['user_id' => $user['id']]);
         $aggregates = $aggStmt->fetch();
 
-        // 3. Official Deposit Destinations
+        // 3. Official Deposit Destinations: Strictly Asiacell & MasterCard
         $officialAccounts = [
-            'zain_cash' => [
-                'name'    => 'زين كاش (ZainCash)',
-                'account' => env('OFFICIAL_ZAIN_CASH', '07801234567'),
-                'title'   => env('OFFICIAL_RECIPIENT_NAME', 'شركة مهام للخدمات المالية ذ.م.م'),
-                'icon'    => 'zaincash'
+            'asiacell' => [
+                'name'         => 'آسيا سيل (Asiacell)',
+                'type'         => 'scratch_card',
+                'title'        => 'شحن فوري عبر كروت تعبئة آسيا سيل',
+                'account'      => 'كارت شحن 14 رقماً',
+                'instructions' => 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع',
+                'icon'         => 'asiacell'
             ],
-            'asia_hawala' => [
-                'name'    => 'آسيا حوالة (AsiaHawala)',
-                'account' => env('OFFICIAL_ASIA_HAWALA', '07709876543'),
-                'title'   => env('OFFICIAL_RECIPIENT_NAME', 'شركة مهام للخدمات المالية ذ.م.م'),
-                'icon'    => 'asiahawala'
-            ],
-            'qi_card' => [
-                'name'    => 'كي كارد / مصرف الرافدين (Qi Card)',
-                'account' => env('OFFICIAL_QI_CARD', 'IQ98RAFB0000001234567890'),
-                'title'   => env('OFFICIAL_RECIPIENT_NAME', 'شركة مهام للخدمات المالية ذ.م.م'),
-                'icon'    => 'qicard'
+            'mastercard' => [
+                'name'         => 'ماستر كارد (MasterCard)',
+                'type'         => 'card_transfer',
+                'title'        => env('OFFICIAL_MASTERCARD_HOLDER', 'شركة مهام للخدمات المالية ذ.م.م'),
+                'account'      => env('OFFICIAL_MASTERCARD_NUMBER', '5300 1234 5678 9012'),
+                'instructions' => 'قم بالتحويل إلى رقم الماستر كارد أعلاه ثم أرفق صورة إشعار التحويل المالي',
+                'icon'         => 'mastercard'
             ]
         ];
 
@@ -71,20 +70,22 @@ class WalletController {
     }
 
     /**
-     * Submit Manual Deposit Request with Receipt Screenshot
+     * Submit Deposit Request
+     * 1) Asiacell: 14-digit scratch card, Anti-Fraud duplicate check, No receipt image required.
+     * 2) MasterCard: Official card transfer with mandatory screenshot receipt.
      */
     public static function deposit(): void {
         $user = AuthMiddleware::authenticate();
 
         $paymentMethod = Validator::sanitize($_POST['payment_method'] ?? '');
         $amountRaw     = $_POST['amount'] ?? 0;
-        $txReference   = Validator::sanitize($_POST['tx_reference'] ?? '');
+        $txReference   = Validator::sanitize($_POST['tx_reference'] ?? ($_POST['card_number'] ?? ''));
         $senderAccount = Validator::sanitize($_POST['sender_account'] ?? '');
 
-        // Allowed payment methods
-        $allowedMethods = ['zain_cash', 'asia_hawala', 'qi_card'];
+        // Strictly Asiacell & MasterCard
+        $allowedMethods = ['asiacell', 'mastercard'];
         if (!in_array($paymentMethod, $allowedMethods, true)) {
-            Response::error('يرجى اختيار طريقة دفع معتمدة (زين كاش، آسيا حوالة، كي كارد).');
+            Response::error('يرجى اختيار طريقة دفع معتمدة (آسيا سيل أو ماستر كارد).');
         }
 
         $minDeposit = (float)env('MIN_DEPOSIT_IQD', 5000);
@@ -93,24 +94,54 @@ class WalletController {
         }
         $amount = (float)$amountRaw;
 
-        if (mb_strlen($txReference) < 4) {
-            Response::error('يرجى إدخال رقم الحوالة أو الرقم المرجعي للإشعار بشكل صحيح.');
-        }
-
-        // Validate and save uploaded receipt screenshot
-        if (!isset($_FILES['receipt'])) {
-            Response::error('يرجى إرفاق صورة إشعار التحويل المالي.');
-        }
-
-        try {
-            $receiptPath = Validator::storeReceiptUpload($_FILES['receipt']);
-        } catch (Exception $e) {
-            Response::error($e->getMessage());
-        }
-
         $pdo = Database::getConnection();
+        $receiptPath = null;
+        $cleanReference = '';
 
-        // Generate Transaction UUID
+        if ($paymentMethod === 'asiacell') {
+            // Validate 14-digit Asiacell Scratch Card
+            $cleanReference = preg_replace('/\D/', '', $txReference);
+            if (strlen($cleanReference) !== 14) {
+                Response::error('يرجى إدخال رقم كارت شحن آسيا سيل المكون من 14 رقماً بالضبط وبدون مسافات.');
+            }
+
+            // Anti-Fraud Protection: Check for Duplicate Card Submission
+            $dupStmt = $pdo->prepare("
+                SELECT id, created_at, status 
+                FROM transactions 
+                WHERE payment_method = 'asiacell' 
+                  AND (tx_reference = :card1 OR sender_account = :card2)
+                LIMIT 1
+            ");
+            $dupStmt->execute([
+                'card1' => $cleanReference,
+                'card2' => $cleanReference
+            ]);
+            $existing = $dupStmt->fetch();
+
+            if ($existing) {
+                Response::error('عذراً، رقم كارت الشحن هذا تم استخدامه أو إرساله مسبقاً! يرجى التأكد من كارت الشحن.');
+            }
+
+            $senderAccount = 'كارت آسيا سيل: ' . $cleanReference;
+            // No receipt image is required for Asiacell
+        } else {
+            // MasterCard: Receipt Screenshot is MANDATORY
+            if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== UPLOAD_ERR_OK) {
+                Response::error('يرجى إرفاق صورة إشعار التحويل المالي (Screenshot) لإيداع الماستر كارد.');
+            }
+
+            try {
+                $receiptPath = Validator::storeReceiptUpload($_FILES['receipt']);
+            } catch (Exception $e) {
+                Response::error($e->getMessage());
+            }
+
+            $cleanReference = $txReference ?: 'تحويل ماستر كارد';
+            $senderAccount  = $senderAccount ?: 'حساب العميل المحول';
+        }
+
+        // Generate Secure Transaction UUID
         $txUuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
             mt_rand(0, 0xffff), mt_rand(0, 0xffff),
             mt_rand(0, 0xffff),
@@ -129,23 +160,33 @@ class WalletController {
                 ) VALUES (
                     :tx_uuid, :user_id, 'deposit', :amount, :balance, :balance,
                     :method, :sender, :ref, :receipt,
-                    'pending', 'إيداع يدوي جديد بانتظار مراجعة الإدارة المالية'
+                    'pending', :notes
                 )
             ");
+
+            $initialNote = ($paymentMethod === 'asiacell')
+                ? "إيداع كارت آسيا سيل [{$cleanReference}] بانتظار التحقق من الرصيد والاعتماد"
+                : "إيداع ماستر كارد بانتظار مراجعة إشعار التحويل والاعتماد";
+
             $txStmt->execute([
                 'tx_uuid' => $txUuid,
                 'user_id' => $user['id'],
                 'amount'  => $amount,
                 'balance' => $user['balance'],
                 'method'  => $paymentMethod,
-                'sender'  => $senderAccount ?: null,
-                'ref'     => $txReference,
-                'receipt' => $receiptPath
+                'sender'  => $senderAccount,
+                'ref'     => $cleanReference,
+                'receipt' => $receiptPath,
+                'notes'   => $initialNote
             ]);
 
             $pdo->commit();
 
-            Response::success('تم استلام طلب الإيداع بنجاح وهو الآن قيد التدقيق لدى فريق العمليات المالية.', [
+            $successMsg = ($paymentMethod === 'asiacell')
+                ? 'تم استلام رقم كارت آسيا سيل بنجاح، وجاري التحقق منه وإضافة الرصيد لحسابك.'
+                : 'تم استلام طلب إيداع الماستر كارد وإشعار التحويل بنجاح، وهو قيد المراجعة الفورية.';
+
+            Response::success($successMsg, [
                 'tx_uuid'        => $txUuid,
                 'amount'         => $amount,
                 'payment_method' => $paymentMethod,
@@ -159,18 +200,19 @@ class WalletController {
     }
 
     /**
-     * Submit Withdrawal Request - Atomic Balance Locking
+     * Submit Withdrawal Request - Strictly MasterCard Exclusive
+     * Atomic Row-Level Locking (SELECT ... FOR UPDATE)
      */
     public static function withdraw(): void {
         $user = AuthMiddleware::authenticate();
 
         $amountRaw       = $_POST['amount'] ?? 0;
-        $paymentMethod   = Validator::sanitize($_POST['payment_method'] ?? '');
+        $paymentMethod   = Validator::sanitize($_POST['payment_method'] ?? 'mastercard');
         $receiverAccount = Validator::sanitize($_POST['receiver_account'] ?? '');
 
-        $allowedMethods = ['zain_cash', 'asia_hawala', 'qi_card'];
-        if (!in_array($paymentMethod, $allowedMethods, true)) {
-            Response::error('يرجى تحديد طريقة استلام أرباح صالحة.');
+        // Strictly MasterCard for withdrawals
+        if ($paymentMethod !== 'mastercard') {
+            Response::error('سحب الأرباح متاح حصرياً عبر بطاقات الماستر كارد (MasterCard).');
         }
 
         $minWithdraw = (float)env('MIN_WITHDRAW_IQD', 5000);
@@ -179,8 +221,10 @@ class WalletController {
         }
         $amount = (float)$amountRaw;
 
-        if (mb_strlen($receiverAccount) < 6) {
-            Response::error('يرجى إدخال رقم المحفظة أو الحساب المصرفي المستلم بدقة.');
+        // Clean and validate MasterCard serial / card number
+        $cleanMasterCard = preg_replace('/[\s\-]/', '', $receiverAccount);
+        if (strlen($cleanMasterCard) < 8 || strlen($cleanMasterCard) > 20) {
+            Response::error('يرجى إدخال الرقم التسلسلي لبطاقة الماستر كارد (رقم البطاقة المستلمة) بدقة (8 إلى 20 رقماً).');
         }
 
         $pdo = Database::getConnection();
@@ -216,7 +260,7 @@ class WalletController {
                     payment_method, sender_account, status, admin_notes
                 ) VALUES (
                     :tx_uuid, :user_id, 'withdraw', :amount, :before, :after,
-                    :method, :receiver, 'pending', 'طلب سحب أرباح قيد المراجعة والمطابقة'
+                    'mastercard', :receiver, 'pending', 'طلب سحب أرباح عبر ماستر كارد قيد التحويل والصرف'
                 )
             ");
             $txStmt->execute([
@@ -225,8 +269,7 @@ class WalletController {
                 'amount'   => $amount,
                 'before'   => $currentBalance,
                 'after'    => $newBalance,
-                'method'   => $paymentMethod,
-                'receiver' => $receiverAccount
+                'receiver' => $cleanMasterCard
             ]);
 
             // Update user balance atomically
@@ -243,9 +286,10 @@ class WalletController {
 
             $pdo->commit();
 
-            Response::success('تم تقديم طلب سحب الأرباح بنجاح. سيتم تحويل المبلغ لحسابك خلال مدة أقصاها 6 ساعات.', [
+            Response::success('تم تقديم طلب سحب الأرباح بنجاح. سيتم تحويل المبلغ لبطاقة الماستر كارد الخاصة بك خلال مدة أقصاها 6 ساعات.', [
                 'tx_uuid'         => $txUuid,
                 'amount'          => $amount,
+                'card_number'     => $cleanMasterCard,
                 'new_balance'     => $newBalance,
                 'pending_balance' => $newPendingBalance
             ]);
@@ -291,10 +335,12 @@ class WalletController {
             ];
 
             $methodLabels = [
-                'zain_cash'        => 'زين كاش',
-                'asia_hawala'      => 'آسيا حوالة',
-                'qi_card'          => 'كي كارد / الرافدين',
-                'wallet_balance'   => 'رصيد المحفظة'
+                'asiacell'       => 'كارت آسيا سيل',
+                'mastercard'     => 'ماستر كارد (MasterCard)',
+                'zain_cash'      => 'زين كاش (أرشيف)',
+                'asia_hawala'    => 'آسيا حوالة (أرشيف)',
+                'qi_card'        => 'كي كارد (أرشيف)',
+                'wallet_balance' => 'رصيد المحفظة'
             ];
 
             return [
@@ -319,5 +365,85 @@ class WalletController {
 
         Response::success('تم جلب سجل المعاملات المالية بنجاح.', ['transactions' => $formatted]);
     }
-}
 
+    /**
+     * Get Real-time User Financial Notifications (The Bell 🔔 Engine)
+     */
+    public static function getNotifications(): void {
+        $user = AuthMiddleware::authenticate();
+        $pdo  = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT id, tx_uuid, type, amount, payment_method, sender_account, tx_reference,
+                   status, admin_notes, created_at, reviewed_at
+            FROM transactions
+            WHERE user_id = :user_id
+            ORDER BY COALESCE(reviewed_at, created_at) DESC
+            LIMIT 25
+        ");
+        $stmt->execute(['user_id' => $user['id']]);
+        $rows = $stmt->fetchAll();
+
+        $notifications = [];
+        $unreadCount = 0;
+
+        foreach ($rows as $row) {
+            $status = $row['status'];
+            $type   = $row['type'];
+            $amount = number_format((float)$row['amount']) . ' د.ع';
+
+            if ($type === 'withdraw') {
+                if ($status === 'approved') {
+                    $notifications[] = [
+                        'id'         => $row['id'],
+                        'title'      => 'تم تحويل أرباحك بنجاح! 💸',
+                        'message'    => "✅ تم تحويل مبلغ {$amount} إلى بطاقة الماستر كارد الخاصة بك بنجاح!",
+                        'type'       => 'success',
+                        'timestamp'  => $row['reviewed_at'] ?: $row['created_at'],
+                        'is_recent'  => (strtotime($row['reviewed_at'] ?: $row['created_at']) > (time() - 86400 * 3))
+                    ];
+                    $unreadCount++;
+                } elseif ($status === 'rejected') {
+                    $reason = $row['admin_notes'] ? "السبب: {$row['admin_notes']}" : 'يرجى التأكد من صحة رقم بطاقة الماستر كارد.';
+                    $notifications[] = [
+                        'id'         => $row['id'],
+                        'title'      => 'تم رفض طلب السحب ⚠️',
+                        'message'    => "❌ تعذر تحويل مبلغ {$amount} وتم إرجاع الرصيد لمحفظتك. {$reason}",
+                        'type'       => 'error',
+                        'timestamp'  => $row['reviewed_at'] ?: $row['created_at'],
+                        'is_recent'  => (strtotime($row['reviewed_at'] ?: $row['created_at']) > (time() - 86400 * 3))
+                    ];
+                    $unreadCount++;
+                }
+            } elseif ($type === 'deposit') {
+                if ($status === 'approved') {
+                    $notifications[] = [
+                        'id'         => $row['id'],
+                        'title'      => 'تأكيد الإيداع وإضافة الرصيد ✅',
+                        'message'    => "✅ تم تأكيد إيداعك وإضافة {$amount} إلى رصيدك بنجاح!",
+                        'type'       => 'success',
+                        'timestamp'  => $row['reviewed_at'] ?: $row['created_at'],
+                        'is_recent'  => (strtotime($row['reviewed_at'] ?: $row['created_at']) > (time() - 86400 * 3))
+                    ];
+                    $unreadCount++;
+                } elseif ($status === 'rejected') {
+                    $reason = $row['admin_notes'] ? "السبب: {$row['admin_notes']}" : 'الكارت أو الإشعار غير مطابق.';
+                    $notifications[] = [
+                        'id'         => $row['id'],
+                        'title'      => 'تم رفض طلب الإيداع ⚠️',
+                        'message'    => "❌ تم رفض إيداع بمبلغ {$amount}. {$reason}",
+                        'type'       => 'error',
+                        'timestamp'  => $row['reviewed_at'] ?: $row['created_at'],
+                        'is_recent'  => (strtotime($row['reviewed_at'] ?: $row['created_at']) > (time() - 86400 * 3))
+                    ];
+                    $unreadCount++;
+                }
+            }
+        }
+
+        Response::success('تم جلب الإشعارات بنجاح.', [
+            'notifications' => $notifications,
+            'unread_count'  => $unreadCount
+        ]);
+    }
+}

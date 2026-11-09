@@ -38,10 +38,12 @@ if (str_contains($contentType, 'application/json')) {
     }
 }
 
-// Resolve endpoint path
+// Resolve endpoint path (Supports ?route=, ?endpoint=, PATH_INFO, and clean URL rewrites)
 $endpoint = '';
 
-if (isset($_GET['endpoint'])) {
+if (!empty($_GET['route'])) {
+    $endpoint = trim((string)$_GET['route'], '/');
+} elseif (!empty($_GET['endpoint'])) {
     $endpoint = trim((string)$_GET['endpoint'], '/');
 } elseif (isset($_SERVER['PATH_INFO'])) {
     $endpoint = trim((string)$_SERVER['PATH_INFO'], '/');
@@ -170,6 +172,12 @@ try {
         case 'wallet/transactions':
             if ($method === 'GET') {
                 WalletController::getTransactions();
+            }
+            break;
+
+        case 'notifications/list':
+            if ($method === 'GET') {
+                WalletController::getNotifications();
             }
             break;
 
