@@ -54,14 +54,15 @@ class TaskController {
 
         $canExecute = $isVip ? true : ($freeRemaining > 0 && $cooldownRemainingSeconds === 0);
 
-        // 3. Fetch active tasks catalog
+        // 3. Fetch active tasks catalog (Filtered for 'all' and tasks specifically assigned to this user)
         $taskStmt = $pdo->prepare("
-            SELECT id, title, description, category, target_url, reward_amount, required_seconds, min_vip_level
+            SELECT id, title, description, category, target_url, attachment_url, target_type, target_user_id, reward_amount, required_seconds, min_vip_level
             FROM tasks
             WHERE is_active = 1
-            ORDER BY id ASC
+              AND (target_type = 'all' OR target_user_id = :user_id)
+            ORDER BY id DESC
         ");
-        $taskStmt->execute();
+        $taskStmt->execute(['user_id' => $user['id']]);
         $tasks = $taskStmt->fetchAll();
 
         // 4. Fetch tasks completed by user today to display progress

@@ -17,8 +17,9 @@ CREATE TABLE `users` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `full_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(191) NOT NULL,
-  `phone` VARCHAR(30) NOT NULL,
-  `password_hash` VARCHAR(255) NOT NULL,
+  `phone` VARCHAR(30) NULL DEFAULT NULL,
+  `password_hash` VARCHAR(255) NULL DEFAULT NULL,
+  `google_id` VARCHAR(191) NULL DEFAULT NULL,
   `role` ENUM('user', 'admin') NOT NULL DEFAULT 'user',
   `balance` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
   `pending_balance` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
@@ -30,7 +31,7 @@ CREATE TABLE `users` (
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_users_email` (`email`),
-  UNIQUE KEY `uk_users_phone` (`phone`),
+  UNIQUE KEY `uk_users_google_id` (`google_id`),
   KEY `idx_users_status_role` (`status`, `role`),
   KEY `idx_users_last_task` (`last_task_completed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -93,13 +94,18 @@ CREATE TABLE `tasks` (
   `description` TEXT NOT NULL,
   `category` VARCHAR(50) NOT NULL DEFAULT 'interactive',
   `target_url` VARCHAR(500) NOT NULL,
+  `attachment_url` VARCHAR(500) NULL DEFAULT NULL,
+  `target_type` ENUM('all', 'specific') NOT NULL DEFAULT 'all',
+  `target_user_id` BIGINT UNSIGNED NULL DEFAULT NULL,
   `reward_amount` DECIMAL(14,2) NOT NULL DEFAULT 250.00,
   `required_seconds` INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'Strict anti-cheat timer duration',
   `min_vip_level` INT NOT NULL DEFAULT 0,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_tasks_active_level` (`is_active`, `min_vip_level`)
+  KEY `idx_tasks_target` (`target_type`, `target_user_id`, `is_active`),
+  KEY `idx_tasks_active_level` (`is_active`, `min_vip_level`),
+  CONSTRAINT `fk_tasks_target_user` FOREIGN KEY (`target_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
@@ -225,12 +231,12 @@ INSERT INTO `app_settings` (`setting_key`, `setting_value`, `description`) VALUE
 -- SEED DATA: INITIAL HIGH-VALUE TASKS
 -- =============================================================================
 
-INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `reward_amount`, `required_seconds`, `min_vip_level`, `is_active`) VALUES
-(1, 'مشاهدة فيديو ترويجي رسمي لمنصة مهام', 'شاهد العرض التعريفي التوضيحي بالكامل لمدة 30 ثانية لدعم تصنيف المنصة وإضافة الأرباح لمحفظتك.', 'video', 'https://www.youtube.com', 250.00, 30, 0, 1),
-(2, 'زيارة بوابة الشراكة الرقمية والتقييم', 'زيارة صفحة خدمات الشركاء المعتمدين والاطلاع على أحدث العروض والخدمات المالية المتاحة في العراق.', 'web', 'https://www.google.iq', 250.00, 30, 0, 1),
-(3, 'متابعة قناة التحديثات الرسمية على تليجرام', 'الانضمام إلى القناة الإخبارية الموثقة للحصول على إشعارات المهام الاستثنائية والمسابقات الأسبوعية.', 'social', 'https://t.me', 250.00, 30, 0, 1),
-(4, 'استطلاع رأي سريع حول خدمات الدفع الإلكتروني', 'الإجابة على استبيان تقييم تجربة المحافظ الرقمية في السوق العراقي للمساهمة في تحسين الخدمات.', 'survey', 'https://forms.google.com', 250.00, 30, 0, 1),
-(5, 'زيارة تطبيق محفظة الدفع الشريكة', 'الاطلاع على تفاصيل خدمات التحويل الفوري وحلول تسوية الفواتير المعتمدة للمستخدمين.', 'web', 'https://www.zaincash.iq', 250.00, 30, 0, 1);
+INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `attachment_url`, `target_type`, `target_user_id`, `reward_amount`, `required_seconds`, `min_vip_level`, `is_active`) VALUES
+(1, 'مشاهدة فيديو ترويجي رسمي لمنصة مهام', 'شاهد العرض التعريفي التوضيحي بالكامل لمدة 30 ثانية لدعم تصنيف المنصة وإضافة الأرباح لمحفظتك.', 'video', 'https://www.youtube.com', 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800', 'all', NULL, 250.00, 30, 0, 1),
+(2, 'زيارة بوابة الشراكة الرقمية والتقييم', 'زيارة صفحة خدمات الشركاء المعتمدين والاطلاع على أحدث العروض والخدمات المالية المتاحة في العراق.', 'web', 'https://www.google.iq', NULL, 'all', NULL, 250.00, 30, 0, 1),
+(3, 'متابعة قناة التحديثات الرسمية على تليجرام', 'الانضمام إلى القناة الإخبارية الموثقة للحصول على إشعارات المهام الاستثنائية والمسابقات الأسبوعية.', 'social', 'https://t.me', NULL, 'all', NULL, 250.00, 30, 0, 1),
+(4, 'استطلاع رأي سريع حول خدمات الدفع الإلكتروني', 'الإجابة على استبيان تقييم تجربة المحافظ الرقمية في السوق العراقي للمساهمة في تحسين الخدمات.', 'survey', 'https://forms.google.com', NULL, 'all', NULL, 250.00, 30, 0, 1),
+(5, 'زيارة تطبيق محفظة الدفع الشريكة', 'الاطلاع على تفاصيل خدمات التحويل الفوري وحلول تسوية الفواتير المعتمدة للمستخدمين.', 'web', 'https://www.zaincash.iq', NULL, 'all', NULL, 250.00, 30, 0, 1);
 
 -- =============================================================================
 -- SEED DATA: INITIAL ADMIN USER FOR PHASE 2 EXPANSION
@@ -238,5 +244,5 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `re
 -- =============================================================================
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `balance`, `pending_balance`, `free_tasks_used`, `is_verified`, `status`) VALUES
-(1, 'الإدارة المركزية | MAHAM', 'admin@maham-iq.com', '07800000000', '$2y$12$KkQe7wJ6bC7y1yvY0q/u1uW1b2e3r4t5y6u7i8o9p0a1s2d3f4g5h', 'admin', 0.00, 0.00, 0, 1, 'active');
+(1, 'الإدارة المركزية | MAHAM', 'admin@maham.iq', '07800000000', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'admin', 0.00, 0.00, 0, 1, 'active');
 

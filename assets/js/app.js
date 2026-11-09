@@ -156,7 +156,7 @@ const App = (() => {
         window.location.hash = viewName;
 
         // Hide all views
-        const views = ['home', 'wallet', 'vip', 'profile'];
+        const views = ['home', 'tasks', 'wallet', 'vip', 'profile'];
         views.forEach(v => {
             const el = document.getElementById(`view-${v}`);
             if (el) {
@@ -201,6 +201,7 @@ const App = (() => {
         try {
             switch (viewName) {
                 case 'home':
+                case 'tasks':
                     if (typeof Dashboard !== 'undefined' && Dashboard.load) Dashboard.load();
                     break;
                 case 'wallet':
@@ -222,7 +223,7 @@ const App = (() => {
 
     const getViewFromHash = () => {
         const hash = window.location.hash.replace(/^#/, '');
-        return ['home', 'wallet', 'vip', 'profile'].includes(hash) ? hash : 'home';
+        return ['home', 'tasks', 'wallet', 'vip', 'profile'].includes(hash) ? hash : 'home';
     };
 
     const handleHashChange = () => {

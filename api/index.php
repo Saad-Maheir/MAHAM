@@ -91,6 +91,13 @@ try {
             }
             break;
 
+        case 'auth/google':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AuthController::googleLogin();
+            }
+            break;
+
         case 'auth/verify-otp':
             if ($method === 'POST') {
                 CsrfMiddleware::handle();

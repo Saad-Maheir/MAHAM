@@ -198,17 +198,20 @@ const Dashboard = (() => {
         }
     };
 
+    let currentTasksCatalog = [];
+
     /**
      * Render Interactive Task Cards
      */
     const renderTasksList = (tasks, userState) => {
-        const container = document.getElementById('tasks-grid-container');
-        if (!container) return;
+        currentTasksCatalog = tasks || DEFAULT_TASKS;
+        const containerHome = document.getElementById('tasks-grid-container');
+        const containerDedicated = document.getElementById('tasks-dedicated-grid-container');
 
         const canExecute = userState.can_execute_task !== false;
         const completedIds = userState.completed_task_ids_today || [];
 
-        container.innerHTML = tasks.map((task) => {
+        const html = tasks.map((task) => {
             const isCompletedToday = completedIds.includes(Number(task.id));
             const reward = userState.is_vip ? userState.current_reward_per_task : Number(task.reward_amount);
 
@@ -243,22 +246,43 @@ const Dashboard = (() => {
                 `;
             }
 
+            const targetBadge = task.target_type === 'specific' ? `
+                <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    مهمة موجهة لك 🎯
+                </span>
+            ` : '';
+
+            const attachmentHtml = task.attachment_url ? `
+                <div class="mb-3">
+                    <a href="${task.attachment_url}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sky-400 hover:text-sky-300 text-[11px] font-semibold transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                        <span>عرض المرفق التوضيحي / الفيديو</span>
+                    </a>
+                </div>
+            ` : '';
+
             return `
                 <div class="glass-panel p-5 relative overflow-hidden flex flex-col justify-between group hover:border-slate-600 transition">
                     <div>
                         <div class="flex items-center justify-between gap-2 mb-3">
-                            <span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                                مكافأة فورية
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                                    مكافأة فورية
+                                </span>
+                                ${targetBadge}
+                            </div>
                             <div class="flex items-center gap-1 text-slate-400 text-[11px] font-mono">
                                 <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <span>30 ثانية</span>
+                                <span>${task.required_seconds || 30} ثانية</span>
                             </div>
                         </div>
                         <h4 class="text-sm font-bold text-white mb-1.5 leading-snug">${task.title}</h4>
-                        <p class="text-xs text-slate-400 mb-4 line-clamp-2 leading-relaxed">${task.description}</p>
+                        <p class="text-xs text-slate-400 mb-3 line-clamp-2 leading-relaxed">${task.description}</p>
+                        ${attachmentHtml}
                     </div>
                     <div class="pt-3 border-t border-slate-800/80">
                         ${actionButtonHtml}
@@ -266,13 +290,16 @@ const Dashboard = (() => {
                 </div>
             `;
         }).join('');
+
+        if (containerHome) containerHome.innerHTML = html;
+        if (containerDedicated) containerDedicated.innerHTML = html;
     };
 
     /**
      * Open Anti-Cheat Task Execution Modal
      */
     const openTaskModal = async (taskId) => {
-        const found = DEFAULT_TASKS.find(t => t.id === taskId) || DEFAULT_TASKS[0];
+        const found = currentTasksCatalog.find(t => t.id === taskId) || DEFAULT_TASKS.find(t => t.id === taskId) || DEFAULT_TASKS[0];
         let session = {
             title: found.title,
             target_url: found.target_url,

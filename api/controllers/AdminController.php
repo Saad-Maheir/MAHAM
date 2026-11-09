@@ -428,9 +428,12 @@ class AdminController {
 
         $stmt = $pdo->query("
             SELECT t.*,
+                   u.full_name as target_user_name,
+                   u.email as target_user_email,
                    COUNT(c.id) as completions_count,
                    COALESCE(SUM(c.reward_earned), 0) as total_rewards_paid
             FROM tasks t
+            LEFT JOIN users u ON t.target_user_id = u.id
             LEFT JOIN task_completions c ON t.id = c.task_id
             GROUP BY t.id
             ORDER BY t.id DESC
@@ -441,19 +444,22 @@ class AdminController {
     }
 
     /**
-     * Micro-Task Link Manager: Create New Task
+     * Micro-Task Link Manager: Create New Task (Supports Target User & Attachments)
      */
     public static function createTask(): void {
         $admin = AuthMiddleware::requireAdmin();
 
-        $title        = Validator::sanitize($_POST['title'] ?? '');
-        $description  = Validator::sanitize($_POST['description'] ?? '');
-        $category     = Validator::sanitize($_POST['category'] ?? 'video');
-        $targetUrl    = filter_var(trim((string)($_POST['target_url'] ?? '')), FILTER_VALIDATE_URL);
-        $rewardAmount = (float)($_POST['reward_amount'] ?? 250);
-        $requiredSec  = (int)($_POST['required_seconds'] ?? 30);
-        $minVipLevel  = (int)($_POST['min_vip_level'] ?? 0);
-        $isActive     = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+        $title         = Validator::sanitize($_POST['title'] ?? '');
+        $description   = Validator::sanitize($_POST['description'] ?? '');
+        $category      = Validator::sanitize($_POST['category'] ?? 'video');
+        $targetUrl     = filter_var(trim((string)($_POST['target_url'] ?? '')), FILTER_VALIDATE_URL);
+        $attachmentUrl = !empty($_POST['attachment_url']) ? filter_var(trim((string)$_POST['attachment_url']), FILTER_VALIDATE_URL) ?: null : null;
+        $targetType    = in_array($_POST['target_type'] ?? 'all', ['all', 'specific'], true) ? $_POST['target_type'] : 'all';
+        $targetUserId  = ($targetType === 'specific' && !empty($_POST['target_user_id'])) ? (int)$_POST['target_user_id'] : null;
+        $rewardAmount  = (float)($_POST['reward_amount'] ?? 250);
+        $requiredSec   = (int)($_POST['required_seconds'] ?? 30);
+        $minVipLevel   = (int)($_POST['min_vip_level'] ?? 0);
+        $isActive      = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
 
         if (mb_strlen($title) < 5 || empty($description)) {
             Response::error('يرجى إدخال عنوان وتفاصيل المهمة بشكل دقيق.');
@@ -461,6 +467,10 @@ class AdminController {
 
         if (!$targetUrl) {
             Response::error('رابط المهمة المستهدف غير صالح. يجب أن يبدأ بـ http:// أو https://.');
+        }
+
+        if ($targetType === 'specific' && !$targetUserId) {
+            Response::error('يرجى تحديد المستخدم المستهدف للمهمة الموجهة.');
         }
 
         if ($rewardAmount <= 0) {
@@ -473,23 +483,26 @@ class AdminController {
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("
-            INSERT INTO tasks (title, description, category, target_url, reward_amount, required_seconds, min_vip_level, is_active)
-            VALUES (:title, :desc, :cat, :url, :reward, :seconds, :vip, :active)
+            INSERT INTO tasks (title, description, category, target_url, attachment_url, target_type, target_user_id, reward_amount, required_seconds, min_vip_level, is_active)
+            VALUES (:title, :desc, :cat, :url, :attach, :target_type, :target_user, :reward, :seconds, :vip, :active)
         ");
         $stmt->execute([
-            'title'   => $title,
-            'desc'    => $description,
-            'cat'     => $category,
-            'url'     => $targetUrl,
-            'reward'  => $rewardAmount,
-            'seconds' => $requiredSec,
-            'vip'     => $minVipLevel,
-            'active'  => $isActive
+            'title'       => $title,
+            'desc'        => $description,
+            'cat'         => $category,
+            'url'         => $targetUrl,
+            'attach'      => $attachmentUrl,
+            'target_type' => $targetType,
+            'target_user' => $targetUserId,
+            'reward'      => $rewardAmount,
+            'seconds'     => $requiredSec,
+            'vip'         => $minVipLevel,
+            'active'      => $isActive
         ]);
 
         $newTaskId = (int)$pdo->lastInsertId();
 
-        Response::success('تمت إضافة المهمة الجديدة وتفعيلها بنجاح.', ['task_id' => $newTaskId], 201);
+        Response::success('تمت إضافة المهمة بنجاح وتوجيهها للمستهدفين.', ['task_id' => $newTaskId], 201);
     }
 
     /**

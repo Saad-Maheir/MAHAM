@@ -24,10 +24,15 @@ const Admin = (() => {
         try {
             const res = await API.get('auth/me');
             if (!res.data || res.data.user.role !== 'admin') {
-                showAuthRequired('عذراً، هذا القسم مخصص للإدارة المركزية فقط.');
+                showAuthRequired('يرجى تسجيل الدخول بحساب مسؤول النظام للمتابعة.');
                 return;
             }
             currentAdmin = res.data.user;
+            const overlay = document.getElementById('admin-auth-guard');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
             const nameEl = document.getElementById('admin-display-name');
             if (nameEl) nameEl.textContent = currentAdmin.full_name;
         } catch (e) {
@@ -38,10 +43,63 @@ const Admin = (() => {
     const showAuthRequired = (msg) => {
         const overlay = document.getElementById('admin-auth-guard');
         const text = document.getElementById('admin-guard-message');
-        if (overlay && text) {
-            text.textContent = msg;
+        if (overlay) {
+            if (text && msg) {
+                text.textContent = msg;
+                text.classList.remove('hidden');
+            }
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
+        }
+    };
+
+    /**
+     * Handle Direct Admin Login Form
+     */
+    const handleAdminLogin = async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('admin-login-error');
+        const submitBtn = document.getElementById('admin-login-submit-btn');
+        const identifier = document.getElementById('admin-login-identifier')?.value.trim();
+        const password = document.getElementById('admin-login-password')?.value;
+
+        if (errEl) errEl.classList.add('hidden');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>جاري التحقق والمصادقة...</span>`;
+        }
+
+        try {
+            const res = await API.post('auth/login', {
+                identifier: identifier,
+                password: password
+            });
+
+            if (res.data.user && res.data.user.role === 'admin') {
+                currentAdmin = res.data.user;
+                const overlay = document.getElementById('admin-auth-guard');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                }
+                const nameEl = document.getElementById('admin-display-name');
+                if (nameEl) nameEl.textContent = currentAdmin.full_name;
+                App.toast('أهلاً بك في مركز القيادة والعمليات المركزية.', 'success');
+                loadAnalytics();
+            } else {
+                throw new Error('عذراً، هذا الحساب لا يمتلك صلاحيات إدارة النظام.');
+            }
+        } catch (err) {
+            if (errEl) {
+                errEl.textContent = err.message || 'بيانات الدخول الإدارية غير صحيحة.';
+                errEl.classList.remove('hidden');
+            }
+            App.toast(err.message || 'فشل تسجيل الدخول الإداري.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>تسجيل الدخول إلى مركز القيادة</span>`;
+            }
         }
     };
 
@@ -316,6 +374,13 @@ const Admin = (() => {
                             <span>${t.title}</span>
                         </div>
                         <div class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">${t.description}</div>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            ${t.target_type === 'specific' 
+                                ? `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">خاص: ${t.target_user_name || 'مستخدم #' + t.target_user_id}</span>`
+                                : `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">عام (الكل)</span>`
+                            }
+                            ${t.attachment_url ? `<a href="${t.attachment_url}" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline flex items-center gap-0.5"><span>عرض المرفق</span></a>` : ''}
+                        </div>
                     </td>
                     <td class="py-3 px-4 text-emerald-400 font-mono font-bold text-xs">
                         ${Number(t.reward_amount).toLocaleString('ar-IQ')} د.ع
@@ -343,14 +408,66 @@ const Admin = (() => {
         }
     };
 
+    const toggleTargetUserField = async () => {
+        const typeSelect = document.getElementById('task-new-target-type');
+        const container = document.getElementById('task-new-target-user-container');
+        if (!typeSelect || !container) return;
+
+        if (typeSelect.value === 'specific') {
+            container.classList.remove('hidden');
+            await populateTargetUsersDropdown();
+        } else {
+            container.classList.add('hidden');
+        }
+    };
+
+    const populateTargetUsersDropdown = async () => {
+        const select = document.getElementById('task-new-target-user');
+        if (!select) return;
+
+        try {
+            const res = await API.get('admin/users');
+            const users = res.data.users || [];
+            select.innerHTML = `<option value="">اختر المستخدم من القائمة...</option>` +
+                users.map(u => `<option value="${u.id}">${u.full_name} (${u.email} - ${u.phone || 'Google'})</option>`).join('');
+        } catch (e) {
+            select.innerHTML = `<option value="">تعذر جلب المستخدمين</option>`;
+        }
+    };
+
+    const assignTaskToUser = async (userId, userName) => {
+        switchSection('tasks');
+        const typeSelect = document.getElementById('task-new-target-type');
+        if (typeSelect) {
+            typeSelect.value = 'specific';
+            await toggleTargetUserField();
+            const userSelect = document.getElementById('task-new-target-user');
+            if (userSelect) userSelect.value = userId;
+        }
+        const titleInput = document.getElementById('task-new-title');
+        if (titleInput) {
+            titleInput.focus();
+            titleInput.scrollIntoView({ behavior: 'smooth' });
+        }
+        App.toast(`تم تحديد المستخدم "${userName}" لإسناد مهمة خاصة له.`, 'info');
+    };
+
     const handleCreateTask = async (e) => {
         e.preventDefault();
         const title = document.getElementById('task-new-title').value.trim();
         const desc = document.getElementById('task-new-desc').value.trim();
         const cat = document.getElementById('task-new-cat').value;
         const url = document.getElementById('task-new-url').value.trim();
+        const attachment = document.getElementById('task-new-attachment')?.value.trim() || '';
+        const targetType = document.getElementById('task-new-target-type')?.value || 'all';
+        const targetUserId = document.getElementById('task-new-target-user')?.value || '';
         const reward = document.getElementById('task-new-reward').value;
         const seconds = document.getElementById('task-new-seconds').value;
+
+        if (targetType === 'specific' && !targetUserId) {
+            App.toast('يرجى اختيار المستخدم المستهدف للمهمة الموجهة.', 'error');
+            return;
+        }
 
         try {
             const res = await API.post('admin/tasks/create', {
@@ -358,12 +475,17 @@ const Admin = (() => {
                 description: desc,
                 category: cat,
                 target_url: url,
+                attachment_url: attachment,
+                target_type: targetType,
+                target_user_id: targetUserId,
                 reward_amount: reward,
                 required_seconds: seconds
             });
 
             App.toast(res.message, 'success');
             document.getElementById('create-task-form').reset();
+            const container = document.getElementById('task-new-target-user-container');
+            if (container) container.classList.add('hidden');
             loadTasks();
         } catch (err) {
             App.toast(err.message, 'error');
@@ -422,6 +544,9 @@ const Admin = (() => {
                     </td>
                     <td class="py-3 px-4 text-left">
                         <div class="flex items-center gap-1.5 justify-end">
+                            <button onclick="Admin.assignTaskToUser(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition" title="إسناد مهمة موجهة">
+                                إسناد مهمة
+                            </button>
                             <button onclick="Admin.openBalanceModal(${u.id}, '${u.full_name}', ${u.balance})" class="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition">
                                 تعديل الرصيد
                             </button>
@@ -527,9 +652,21 @@ const Admin = (() => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await API.post('auth/logout');
+        } catch (e) {}
+        currentAdmin = null;
+        showAuthRequired('تم تسجيل الخروج من لوحة الإدارة.');
+    };
+
     return {
         init,
+        handleAdminLogin,
+        handleLogout,
         switchSection,
+        toggleTargetUserField,
+        assignTaskToUser,
         loadDeposits,
         inspectReceipt,
         closeReceiptInspect,
