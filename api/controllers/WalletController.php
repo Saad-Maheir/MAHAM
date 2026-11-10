@@ -107,20 +107,20 @@ class WalletController {
 
             // Anti-Fraud Protection: Check for Duplicate Card Submission
             $dupStmt = $pdo->prepare("
-                SELECT id, created_at, status 
+                SELECT id 
                 FROM transactions 
-                WHERE payment_method = 'asiacell' 
-                  AND (tx_reference = :card1 OR sender_account = :card2)
+                WHERE type = 'deposit' 
+                  AND (tx_reference = :ref OR sender_account LIKE :ref_like)
                 LIMIT 1
             ");
             $dupStmt->execute([
-                'card1' => $cleanReference,
-                'card2' => $cleanReference
+                'ref'      => $cleanReference,
+                'ref_like' => "%{$cleanReference}%"
             ]);
             $existing = $dupStmt->fetch();
 
             if ($existing) {
-                Response::error('عذراً، رقم كارت الشحن هذا تم استخدامه أو إرساله مسبقاً! يرجى التأكد من كارت الشحن.');
+                Response::error('رقم كارت آسيا سيل هذا تم إرساله مسبقاً!');
             }
 
             $senderAccount = 'كارت آسيا سيل: ' . $cleanReference;

@@ -3,18 +3,19 @@
  * Cache-busting & Instant Live Updates Pipeline for Desktop & Mobile
  */
 
-const CACHE_NAME = 'maham-fintech-v2.4.0';
+const CACHE_NAME = 'maham-fintech-v3.2.2';
 const STATIC_ASSETS = [
     './',
     './index.html',
     './admin.html',
-    './assets/css/app.css?v=2.4.0',
-    './assets/js/api.js?v=2.4.0',
-    './assets/js/auth.js?v=2.4.0',
-    './assets/js/dashboard.js?v=2.4.0',
-    './assets/js/wallet.js?v=2.4.0',
-    './assets/js/subscriptions.js?v=2.4.0',
-    './assets/js/app.js?v=2.4.0',
+    './assets/css/app.css?v=3.2.2',
+    './assets/js/api.js?v=3.2.2',
+    './assets/js/auth.js?v=3.2.2',
+    './assets/js/dashboard.js?v=3.2.2',
+    './assets/js/wallet.js?v=3.2.2',
+    './assets/js/subscriptions.js?v=3.2.2',
+    './assets/js/app.js?v=3.2.2',
+    './assets/js/admin.js?v=3.2.2',
     './manifest.json'
 ];
 

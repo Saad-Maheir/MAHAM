@@ -18,3 +18,4 @@
 
 # Prevent directory listing and CGI execution
 Options -Indexes -ExecCGI
+

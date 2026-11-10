@@ -11,27 +11,51 @@ require_once __DIR__ . '/../utils/Response.php';
 
 class AuthMiddleware {
     /**
-     * Authenticate active user session
+     * Authenticate active user session with 30-day token auto-recovery
      */
     public static function authenticate(): array {
         $userId = $_SESSION['user_id'] ?? null;
+
+        // Auto-recover session from 30-Day Remember Token or Bearer Authorization header
+        if (!$userId) {
+            $token = null;
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+            if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
+                $token = $matches[1];
+            } elseif (!empty($_COOKIE['maham_remember'])) {
+                $token = (string)$_COOKIE['maham_remember'];
+            }
+
+            if (!empty($token) && strlen($token) >= 32) {
+                try {
+                    $pdo = Database::getConnection();
+                    $tokenStmt = $pdo->prepare("SELECT id, role, status FROM users WHERE remember_token = :token LIMIT 1");
+                    $tokenStmt->execute(['token' => $token]);
+                    $tokenUser = $tokenStmt->fetch();
+
+                    if ($tokenUser && $tokenUser['status'] === 'active') {
+                        $_SESSION['user_id'] = (int)$tokenUser['id'];
+                        $_SESSION['role']    = $tokenUser['role'];
+                        $userId = (int)$tokenUser['id'];
+                    }
+                } catch (Exception $e) {
+                    // Token inspection non-blocking error fallback
+                }
+            }
+        }
 
         if (!$userId) {
             Response::error('يرجى تسجيل الدخول للوصول إلى هذه الخدمة.', 401);
         }
 
-        // Anti-Session Hijacking: Strict Browser Fingerprint Verification
-        $currentUserAgentHash = hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
-        if (isset($_SESSION['user_agent_hash']) && !hash_equals($_SESSION['user_agent_hash'], $currentUserAgentHash)) {
-            $_SESSION = [];
-            if (session_status() === PHP_SESSION_ACTIVE) {
-                session_destroy();
-            }
-            Response::error('تم إنهاء الجلسة لأسباب أمنية (اكتشاف تغيير في بصمة الجهاز أو المتصفح). يرجى تسجيل الدخول مجدداً.', 401);
-        }
-
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, full_name, email, phone, role, balance, pending_balance, free_tasks_used, last_task_completed_at, is_verified, status FROM users WHERE id = :id LIMIT 1");
+        $stmt = $pdo->prepare("
+            SELECT id, full_name, email, phone, role, avatar_url, balance, pending_balance, 
+                   free_tasks_used, last_task_completed_at, is_verified, status 
+            FROM users 
+            WHERE id = :id 
+            LIMIT 1
+        ");
         $stmt->execute(['id' => $userId]);
         $user = $stmt->fetch();
 

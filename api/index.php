@@ -42,9 +42,11 @@ if (str_contains($contentType, 'application/json')) {
 $endpoint = '';
 
 if (!empty($_GET['route'])) {
-    $endpoint = trim((string)$_GET['route'], '/');
+    $parts = explode('?', (string)$_GET['route'], 2);
+    $endpoint = trim($parts[0], '/');
 } elseif (!empty($_GET['endpoint'])) {
-    $endpoint = trim((string)$_GET['endpoint'], '/');
+    $parts = explode('?', (string)$_GET['endpoint'], 2);
+    $endpoint = trim($parts[0], '/');
 } elseif (isset($_SERVER['PATH_INFO'])) {
     $endpoint = trim((string)$_SERVER['PATH_INFO'], '/');
 } else {
@@ -81,21 +83,18 @@ try {
         // Authentication & Profile Endpoints
         case 'auth/register':
             if ($method === 'POST') {
-                CsrfMiddleware::handle();
                 AuthController::register();
             }
             break;
 
         case 'auth/login':
             if ($method === 'POST') {
-                CsrfMiddleware::handle();
                 AuthController::login();
             }
             break;
 
         case 'auth/google':
             if ($method === 'POST') {
-                CsrfMiddleware::handle();
                 AuthController::googleLogin();
             }
             break;

@@ -81,13 +81,16 @@ if (env('APP_DEBUG', false)) {
 // Set Default Timezone to Baghdad
 date_default_timezone_set(env('APP_TIMEZONE', 'Asia/Baghdad'));
 
-// Configure Secure Session Parameters
+// Configure Secure Persistent Session Parameters (30-Day Session Lifetime)
 if (session_status() === PHP_SESSION_NONE) {
+    $sessionLifetime = (int)env('SESSION_LIFETIME', 2592000); // 30 days = 2,592,000 seconds
+
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');
-    ini_set('session.gc_maxlifetime', (string)env('SESSION_LIFETIME', 86400));
+    ini_set('session.cookie_lifetime', (string)$sessionLifetime);
+    ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
 
     $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
@@ -95,6 +98,14 @@ if (session_status() === PHP_SESSION_NONE) {
     if ($isHttps) {
         ini_set('session.cookie_secure', '1');
     }
+
+    session_set_cookie_params([
+        'lifetime' => $sessionLifetime,
+        'path'     => '/',
+        'secure'   => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
 
     session_start();
 }

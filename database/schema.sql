@@ -20,6 +20,8 @@ CREATE TABLE `users` (
   `phone` VARCHAR(30) NULL DEFAULT NULL,
   `password_hash` VARCHAR(255) NULL DEFAULT NULL,
   `google_id` VARCHAR(191) NULL DEFAULT NULL,
+  `avatar_url` VARCHAR(500) NULL DEFAULT NULL,
+  `remember_token` VARCHAR(128) NULL DEFAULT NULL,
   `role` ENUM('user', 'admin') NOT NULL DEFAULT 'user',
   `balance` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
   `pending_balance` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
@@ -32,6 +34,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_users_email` (`email`),
   UNIQUE KEY `uk_users_google_id` (`google_id`),
+  KEY `idx_users_remember_token` (`remember_token`),
   KEY `idx_users_status_role` (`status`, `role`),
   KEY `idx_users_last_task` (`last_task_completed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -244,5 +247,6 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `at
 -- =============================================================================
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `balance`, `pending_balance`, `free_tasks_used`, `is_verified`, `status`) VALUES
-(1, 'الإدارة المركزية | MAHAM', 'admin@maham.iq', '07800000000', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'admin', 0.00, 0.00, 0, 1, 'active');
+(1, 'الإدارة المركزية | MAHAM', 'admin@maham.iq', '07800000000', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'admin', 0.00, 0.00, 0, 1, 'active'),
+(2, 'سعد ماهر سعد (حساب تجريبي)', 'user@maham.iq', '07812345678', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'user', 25000.00, 0.00, 0, 1, 'active');
 

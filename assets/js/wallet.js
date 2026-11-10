@@ -62,8 +62,8 @@ const Wallet = (() => {
 
         if (availEl) {
             availEl.innerHTML = `
-                <span class="text-3xl font-extrabold text-emerald-400 font-mono">
-                    ${Number(data.available_balance).toLocaleString('ar-IQ')}
+                <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                    ${Number(data.available_balance).toLocaleString('en-US')}
                 </span>
                 <span class="currency-iqd text-emerald-500/80 mr-1.5 font-bold">د.ع</span>
             `;
@@ -71,8 +71,8 @@ const Wallet = (() => {
 
         if (pendingEl) {
             pendingEl.innerHTML = `
-                <span class="text-2xl font-bold text-amber-400 font-mono">
-                    ${Number(data.pending_balance).toLocaleString('ar-IQ')}
+                <span class="text-2xl font-bold text-amber-500 dark:text-amber-400 font-mono">
+                    ${Number(data.pending_balance).toLocaleString('en-US')}
                 </span>
                 <span class="currency-iqd text-amber-500/80 mr-1 font-semibold">د.ع</span>
             `;
@@ -80,10 +80,10 @@ const Wallet = (() => {
 
         if (withdrawnEl) {
             withdrawnEl.innerHTML = `
-                <span class="text-2xl font-bold text-slate-200 font-mono">
-                    ${Number(data.total_withdrawn).toLocaleString('ar-IQ')}
+                <span class="text-2xl font-bold text-slate-700 dark:text-slate-200 font-mono">
+                    ${Number(data.total_withdrawn).toLocaleString('en-US')}
                 </span>
-                <span class="currency-iqd text-slate-400 mr-1 font-semibold">د.ع</span>
+                <span class="currency-iqd text-slate-500 dark:text-slate-400 mr-1 font-semibold">د.ع</span>
             `;
         }
     };
@@ -98,18 +98,18 @@ const Wallet = (() => {
         const withView = document.getElementById('wallet-withdraw-view');
 
         if (tabName === 'deposit') {
-            depTabBtn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40');
-            depTabBtn.classList.remove('text-slate-400', 'border-transparent');
-            withTabBtn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40');
-            withTabBtn.classList.add('text-slate-400', 'border-transparent');
+            depTabBtn.classList.add('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/40');
+            depTabBtn.classList.remove('text-slate-500', 'dark:text-slate-400', 'text-slate-400', 'border-transparent');
+            withTabBtn.classList.remove('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/40');
+            withTabBtn.classList.add('text-slate-500', 'dark:text-slate-400', 'border-transparent');
 
             depView.classList.remove('hidden');
             withView.classList.add('hidden');
         } else {
-            withTabBtn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40');
-            withTabBtn.classList.remove('text-slate-400', 'border-transparent');
-            depTabBtn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40');
-            depTabBtn.classList.add('text-slate-400', 'border-transparent');
+            withTabBtn.classList.add('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/40');
+            withTabBtn.classList.remove('text-slate-500', 'dark:text-slate-400', 'text-slate-400', 'border-transparent');
+            depTabBtn.classList.remove('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/40');
+            depTabBtn.classList.add('text-slate-500', 'dark:text-slate-400', 'border-transparent');
 
             withView.classList.remove('hidden');
             depView.classList.add('hidden');
@@ -127,11 +127,11 @@ const Wallet = (() => {
             const btn = document.getElementById(`method-btn-${m}`);
             if (btn) {
                 if (m === method) {
-                    btn.classList.add('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-300');
-                    btn.classList.remove('border-slate-800', 'bg-slate-900', 'text-slate-400');
+                    btn.classList.add('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-700', 'dark:text-emerald-300');
+                    btn.classList.remove('border-slate-200', 'dark:border-slate-800', 'bg-slate-100', 'dark:bg-slate-900', 'text-slate-700', 'dark:text-slate-400', 'border-slate-800', 'bg-slate-900', 'text-slate-400');
                 } else {
-                    btn.classList.remove('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-300');
-                    btn.classList.add('border-slate-800', 'bg-slate-900', 'text-slate-400');
+                    btn.classList.remove('border-emerald-500', 'bg-emerald-500/15', 'text-emerald-700', 'text-emerald-300', 'dark:text-emerald-300');
+                    btn.classList.add('border-slate-200', 'dark:border-slate-800', 'bg-slate-100', 'dark:bg-slate-900', 'text-slate-700', 'dark:text-slate-400');
                 }
             }
         });
@@ -446,7 +446,7 @@ const Wallet = (() => {
                         ${tx.sender_account && tx.sender_account !== '—' && tx.sender_account !== tx.tx_reference ? `<span class="block text-[10px] text-slate-500 font-mono">${tx.sender_account}</span>` : ''}
                     </td>
                     <td class="py-3 px-4 font-mono font-bold ${amountColor} text-left" dir="ltr">
-                        ${amountPrefix}${Number(tx.amount).toLocaleString('ar-IQ')} <span class="text-xs">IQD</span>
+                        ${amountPrefix}${Number(tx.amount).toLocaleString('en-US')} <span class="text-xs">IQD</span>
                     </td>
                     <td class="py-3 px-4 text-center">
                         ${statusBadge}
@@ -467,3 +467,6 @@ const Wallet = (() => {
         handleWithdrawSubmit
     };
 })();
+
+// Explicitly expose on window for reliable global invocation
+window.Wallet = Wallet;

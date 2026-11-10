@@ -128,8 +128,11 @@ const Subscriptions = (() => {
             const isFree = pkg.code === 'free';
             const isActive = pkg.is_active_tier;
 
-            let cardBorder = 'border-slate-800/80 hover:border-slate-700';
-            let badgeBg = 'bg-slate-800 text-slate-300';
+            const duration = pkg.duration_days || (isFree ? 365 : 30);
+            const tasksDisplay = pkg.tasks_display || (isFree ? '5 مهام إجمالاً' : 'مفتوح (∞)');
+
+            let cardBorder = 'border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700';
+            let badgeBg = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
             let popularBadge = '';
 
             // Color scheme based on VIP level
@@ -140,17 +143,17 @@ const Subscriptions = (() => {
                     </div>
                 `;
                 cardBorder = 'border-amber-500/40 shadow-xl shadow-amber-950/20';
-                badgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                badgeBg = 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30';
             } else if (pkg.code === 'vip_5') {
                 cardBorder = 'border-emerald-500/40 shadow-xl shadow-emerald-950/20';
-                badgeBg = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                badgeBg = 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30';
             }
 
             let buttonHtml = '';
             if (isActive) {
                 buttonHtml = `
-                    <button disabled class="w-full py-3 px-4 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold text-sm flex items-center justify-center gap-2 cursor-default">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <button disabled class="w-full py-3 px-4 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 font-bold text-sm flex items-center justify-center gap-2 cursor-default">
+                        <svg class="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                         باقتك النشطة حالياً
@@ -158,7 +161,7 @@ const Subscriptions = (() => {
                 `;
             } else if (isFree) {
                 buttonHtml = `
-                    <button disabled class="w-full py-3 px-4 rounded-xl bg-slate-800 text-slate-400 font-bold text-sm cursor-default">
+                    <button disabled class="w-full py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm cursor-default">
                         الباقة التأسيسية الممنوحة
                     </button>
                 `;
@@ -181,64 +184,64 @@ const Subscriptions = (() => {
                             <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeBg}">
                                 ${pkg.badge_name}
                             </span>
-                            <span class="text-xs text-slate-400 font-medium">المدة: ${pkg.duration_days} يوماً</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">المدة: ${duration} يوماً</span>
                         </div>
 
-                        <h3 class="text-xl font-black text-white mb-2">${pkg.name}</h3>
-                        <p class="text-xs text-slate-400 mb-6 leading-relaxed">${pkg.description || 'باقة استثمارية معتمدة لمضاعفة الأرباح اليومية عبر منصة مهام.'}</p>
+                        <h3 class="text-xl font-black text-slate-900 dark:text-white mb-2">${pkg.name}</h3>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">${pkg.description || 'باقة استثمارية معتمدة لمضاعفة الأرباح اليومية عبر منصة مهام.'}</p>
 
                         <!-- Price Tag -->
-                        <div class="mb-6 p-4 rounded-xl bg-slate-900/80 border border-slate-800/80">
-                            <div class="text-xs text-slate-400 mb-1">سعر الاشتراك الشهري:</div>
+                        <div class="mb-6 p-4 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80">
+                            <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">سعر الاشتراك الشهري:</div>
                             <div class="flex items-baseline gap-1">
-                                <span class="text-3xl font-black font-mono ${isFree ? 'text-slate-300' : 'text-emerald-400'}">
-                                    ${Number(pkg.price).toLocaleString('ar-IQ')}
+                                <span class="text-3xl font-black font-mono ${isFree ? 'text-slate-700 dark:text-slate-300' : 'text-emerald-600 dark:text-emerald-400'}">
+                                    ${Number(pkg.price).toLocaleString('en-US')}
                                 </span>
-                                <span class="currency-iqd text-slate-400 font-bold">د.ع</span>
+                                <span class="currency-iqd text-slate-500 dark:text-slate-400 font-bold">د.ع</span>
                             </div>
                         </div>
 
                         <!-- Feature Specifications -->
-                        <div class="space-y-3 mb-6 text-xs text-slate-300">
-                            <div class="flex items-center justify-between py-1.5 border-b border-slate-800/60">
-                                <span class="text-slate-400 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                        <div class="space-y-3 mb-6 text-xs text-slate-700 dark:text-slate-300">
+                            <div class="flex items-center justify-between py-1.5 border-b border-slate-200 dark:border-slate-800/60">
+                                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                     الربح اليومي الثابت:
                                 </span>
-                                <span class="font-bold font-mono text-emerald-400 text-sm">
-                                    ${Number(pkg.daily_profit).toLocaleString('ar-IQ')} د.ع
+                                <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+                                    ${Number(pkg.daily_profit).toLocaleString('en-US')} د.ع
                                 </span>
                             </div>
 
-                            <div class="flex items-center justify-between py-1.5 border-b border-slate-800/60">
-                                <span class="text-slate-400 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                            <div class="flex items-center justify-between py-1.5 border-b border-slate-200 dark:border-slate-800/60">
+                                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                     عدد المهام اليومية:
                                 </span>
-                                <span class="font-bold ${isFree ? 'text-slate-300' : 'text-amber-400 font-mono'}">
-                                    ${pkg.tasks_display}
+                                <span class="font-bold ${isFree ? 'text-slate-700 dark:text-slate-300' : 'text-amber-500 dark:text-amber-400 font-mono'}">
+                                    ${tasksDisplay}
                                 </span>
                             </div>
 
                             <div class="flex items-center justify-between py-1.5">
-                                <span class="text-slate-400 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                <span class="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                     نظام التبريد الزمني:
                                 </span>
-                                <span class="font-bold text-slate-300">
+                                <span class="font-bold text-slate-700 dark:text-slate-300">
                                     ${isFree ? '24 ساعة بين المهام' : 'فوري بدون انتظار'}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800/80">
                         ${buttonHtml}
                     </div>
                 </div>
@@ -277,9 +280,9 @@ const Subscriptions = (() => {
         const remainingEl = document.getElementById('sub-modal-remaining-balance');
 
         nameEl.textContent = pkg.name;
-        priceEl.textContent = `${Number(pkg.price).toLocaleString('ar-IQ')} د.ع`;
-        balanceEl.textContent = `${Number(currentBalance).toLocaleString('ar-IQ')} د.ع`;
-        remainingEl.textContent = `${Number(currentBalance - pkg.price).toLocaleString('ar-IQ')} د.ع`;
+        priceEl.textContent = `${Number(pkg.price).toLocaleString('en-US')} د.ع`;
+        balanceEl.textContent = `${Number(currentBalance).toLocaleString('en-US')} د.ع`;
+        remainingEl.textContent = `${Number(currentBalance - pkg.price).toLocaleString('en-US')} د.ع`;
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -331,9 +334,9 @@ const Subscriptions = (() => {
         const missingEl = document.getElementById('sub-ins-missing-amount');
 
         nameEl.textContent = pkg.name;
-        priceEl.textContent = `${Number(pkg.price).toLocaleString('ar-IQ')} د.ع`;
-        balanceEl.textContent = `${Number(currentBalance).toLocaleString('ar-IQ')} د.ع`;
-        missingEl.textContent = `${Number(missingAmount).toLocaleString('ar-IQ')} د.ع`;
+        priceEl.textContent = `${Number(pkg.price).toLocaleString('en-US')} د.ع`;
+        balanceEl.textContent = `${Number(currentBalance).toLocaleString('en-US')} د.ع`;
+        missingEl.textContent = `${Number(missingAmount).toLocaleString('en-US')} د.ع`;
 
         const depositBtn = document.getElementById('sub-ins-deposit-btn');
         depositBtn.onclick = () => {
@@ -342,7 +345,7 @@ const Subscriptions = (() => {
             App.navigate('wallet');
             Wallet.switchActionTab('deposit');
             Wallet.setDepositAmount(missingAmount);
-            App.toast(`تم تعيين المبلغ المطلوب للإيداع: ${Number(missingAmount).toLocaleString('ar-IQ')} د.ع`, 'info');
+            App.toast(`تم تعيين المبلغ المطلوب للإيداع: ${Number(missingAmount).toLocaleString('en-US')} د.ع`, 'info');
         };
 
         modal.classList.remove('hidden');
@@ -369,4 +372,7 @@ const Subscriptions = (() => {
         closeInsufficientModal
     };
 })();
+
+// Explicitly expose on window for reliable global invocation
+window.Subscriptions = Subscriptions;
 
