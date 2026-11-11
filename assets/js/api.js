@@ -285,7 +285,19 @@ const API = (() => {
             // 2.5 Auth Google One-Click Engine
             if (endpoint === 'auth/google') {
                 const users = getStore('users_db', []);
-                const googlePayload = body.google_user || {};
+                let googlePayload = body.google_user || {};
+                if (body.credential && (!googlePayload.email || !googlePayload.sub)) {
+                    try {
+                        const parts = String(body.credential).split('.');
+                        if (parts[1]) {
+                            const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                            const decoded = JSON.parse(decodeURIComponent(atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+                            if (decoded && typeof decoded === 'object') {
+                                googlePayload = { ...decoded, ...googlePayload };
+                            }
+                        }
+                    } catch (e) {}
+                }
                 const googleEmail = (body.email || googlePayload.email || '').trim().toLowerCase();
                 const googleName = (body.full_name || body.name || googlePayload.name || 'مستخدم Google').trim();
                 const googleSub = body.sub || googlePayload.sub || '';

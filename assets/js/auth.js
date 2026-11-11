@@ -2,7 +2,7 @@
  * MAHAM FinTech Platform - Authentication & OTP Verification Manager
  */
 
-const GOOGLE_CLIENT_ID = window.MAHAM_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = window.MAHAM_GOOGLE_CLIENT_ID || '281257529573-l91c4qsc278vnvphijb9iak64teu2v9p.apps.googleusercontent.com';
 
 const Auth = (() => {
     let resendTimer = null;
