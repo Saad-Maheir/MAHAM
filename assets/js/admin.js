@@ -108,16 +108,42 @@ const Admin = (() => {
     const applyTheme = (theme) => {
         const html = document.documentElement;
         const icon = document.getElementById('header-theme-icon');
+        const mobileIcon = document.getElementById('mobile-theme-icon');
         const label = document.getElementById('profile-theme-label');
+
+        const sunSvg = `<svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`;
+        const moonSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>`;
 
         if (theme === 'dark') {
             html.classList.add('dark');
-            if (icon) icon.textContent = '☀️';
+            if (icon) icon.innerHTML = sunSvg;
+            if (mobileIcon) mobileIcon.innerHTML = sunSvg;
             if (label) label.textContent = 'الوضع الليلي';
         } else {
             html.classList.remove('dark');
-            if (icon) icon.textContent = '🌙';
+            if (icon) icon.innerHTML = moonSvg;
+            if (mobileIcon) mobileIcon.innerHTML = moonSvg;
             if (label) label.textContent = 'الوضع النهاري';
+        }
+    };
+
+    /**
+     * Toggle Admin Login Password Visibility
+     */
+    const toggleLoginPasswordVisibility = () => {
+        const pwdInput = document.getElementById('admin-login-password');
+        const eyeIcon = document.getElementById('admin-pwd-eye-icon');
+        if (!pwdInput) return;
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            if (eyeIcon) {
+                eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>`;
+            }
+        } else {
+            pwdInput.type = 'password';
+            if (eyeIcon) {
+                eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
+            }
         }
     };
 
@@ -470,7 +496,12 @@ const Admin = (() => {
                             ماستر كارد (MasterCard)
                         </span>
                         <div class="mt-1.5 p-2 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between gap-2">
-                            <span class="font-mono font-black text-white text-xs tracking-wider">💳 ${cardNum}</span>
+                            <span class="font-mono font-black text-white text-xs tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                </svg>
+                                <span>${cardNum}</span>
+                            </span>
                             <button type="button" onclick="navigator.clipboard.writeText('${cardNum}'); App.toast('تم نسخ رقم بطاقة الماستر كارد بنجاح', 'success')" class="px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300 text-[10px] font-bold shrink-0">
                                 نسخ البطاقة
                             </button>
@@ -723,8 +754,11 @@ const Admin = (() => {
                     </td>
                     <td class="py-3 px-4 text-left">
                         <div class="flex items-center gap-1.5 justify-end">
-                            <button onclick="Admin.grantUserVipPrompt(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-300 text-xs font-semibold transition" title="منح باقة VIP">
-                                منح VIP ⚡
+                            <button onclick="Admin.grantUserVipPrompt(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-300 text-xs font-semibold transition flex items-center gap-1" title="منح باقة VIP">
+                                <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                                </svg>
+                                <span>ترقية VIP</span>
                             </button>
                             <button onclick="Admin.assignTaskToUser(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition" title="إسناد مهمة موجهة">
                                 إسناد مهمة
@@ -902,6 +936,7 @@ const Admin = (() => {
         toggleSidebar,
         toggleMobileSidebar: toggleSidebar,
         handleAdminLogin,
+        toggleLoginPasswordVisibility,
         handleLogout,
         switchSection,
         toggleTargetUserField,
