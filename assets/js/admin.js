@@ -288,7 +288,19 @@ const Admin = (() => {
                     btn.classList.add('text-slate-400', 'border-transparent');
                 }
             }
+            const mobBtn = document.getElementById(`admin-mob-nav-${s}`);
+            if (mobBtn) {
+                if (s === sectionId) {
+                    mobBtn.classList.add('active', 'text-emerald-400');
+                    mobBtn.classList.remove('text-slate-400');
+                } else {
+                    mobBtn.classList.remove('active', 'text-emerald-400');
+                    mobBtn.classList.add('text-slate-400');
+                }
+            }
         });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // Trigger loaders
         switch (sectionId) {
@@ -317,8 +329,32 @@ const Admin = (() => {
             document.getElementById('stat-today-rewards').textContent = `${Number(data.tasks.rewards_paid_today).toLocaleString('en-US')} د.ع`;
             document.getElementById('stat-total-deposits').textContent = `${Number(data.financials.total_deposits).toLocaleString('en-US')} د.ع`;
             document.getElementById('stat-total-withdrawals').textContent = `${Number(data.financials.total_withdrawals).toLocaleString('en-US')} د.ع`;
-            document.getElementById('stat-pending-deposits-badge').textContent = data.financials.pending_deposits;
-            document.getElementById('stat-pending-withdrawals-badge').textContent = data.financials.pending_withdrawals;
+            
+            // Sync Pending Badges (Desktop & Mobile) - strictly hide if 0
+            const depBadge = document.getElementById('stat-pending-deposits-badge');
+            const mobDepBadge = document.getElementById('mob-stat-pending-deposits-badge');
+            const withBadge = document.getElementById('stat-pending-withdrawals-badge');
+            const mobWithBadge = document.getElementById('mob-stat-pending-withdrawals-badge');
+            const pendingDeps = Number(data.financials.pending_deposits || 0);
+            const pendingWiths = Number(data.financials.pending_withdrawals || 0);
+
+            if (depBadge) {
+                depBadge.textContent = pendingDeps;
+                depBadge.classList.toggle('hidden', pendingDeps === 0);
+            }
+            if (mobDepBadge) {
+                mobDepBadge.textContent = pendingDeps;
+                mobDepBadge.classList.toggle('hidden', pendingDeps === 0);
+            }
+            if (withBadge) {
+                withBadge.textContent = pendingWiths;
+                withBadge.classList.toggle('hidden', pendingWiths === 0);
+            }
+            if (mobWithBadge) {
+                mobWithBadge.textContent = pendingWiths;
+                mobWithBadge.classList.toggle('hidden', pendingWiths === 0);
+            }
+
             document.getElementById('stat-vip-subs').textContent = data.vip.active_subscriptions.toLocaleString('en-US');
         } catch (e) {
             App.toast('تعذر جلب إحصائيات النظام.', 'error');

@@ -25,3 +25,5 @@ deploy.js
 
 
 .vercel
+
+package.ps1

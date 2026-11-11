@@ -640,3 +640,21 @@ html:not(.dark) #profile-toggle-thumb {
         transform: translateY(0);
     }
 }
+
+/* ========================================================================= */
+/* ADMIN MOBILE FLOATING NAVIGATION & SAFE PADDING */
+/* ========================================================================= */
+@media (max-width: 767px) {
+    main {
+        padding-bottom: 120px !important;
+    }
+    #admin-mobile-bottom-nav {
+        display: block !important;
+    }
+}
+
+@media (min-width: 768px) {
+    #admin-mobile-bottom-nav {
+        display: none !important;
+    }
+}
