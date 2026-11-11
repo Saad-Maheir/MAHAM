@@ -20,12 +20,12 @@ class Database {
      */
     public static function getConnection(): PDO {
         if (self::$instance === null) {
-            $host    = env('DB_HOST', 'sql211.infinityfree.com');
+            $host    = env('DB_HOST', 'localhost');
             $port    = (int)env('DB_PORT', 3306);
-            $dbName  = env('DB_NAME', 'if0_43395665_maham');
+            $dbName  = env('DB_NAME', 'u991942404_u123456_maham');
             $charset = env('DB_CHARSET', 'utf8mb4');
-            $user    = env('DB_USER', 'if0_43395665');
-            $pass    = env('DB_PASS', 'dcucDzcQps0fx');
+            $user    = env('DB_USER', 'u991942404_u123456_user');
+            $pass    = env('DB_PASS', 'Ll112233445566l');
 
             $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset={$charset}";
 
