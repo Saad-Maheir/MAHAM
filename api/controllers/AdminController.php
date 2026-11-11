@@ -30,9 +30,9 @@ class AdminController {
         $userMetricsStmt = $pdo->query("
             SELECT 
                 COUNT(*) as total_users,
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_users,
-                SUM(balance) as total_users_balance,
-                SUM(pending_balance) as total_held_withdrawals
+                COALESCE(SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END), 0) as active_users,
+                COALESCE(SUM(balance), 0.00) as total_users_balance,
+                COALESCE(SUM(pending_balance), 0.00) as total_held_withdrawals
             FROM users 
             WHERE role = 'user'
         ");
@@ -42,7 +42,7 @@ class AdminController {
         $todayTasksStmt = $pdo->query("
             SELECT 
                 COUNT(*) as completed_today,
-                COALESCE(SUM(reward_earned), 0) as rewards_paid_today
+                COALESCE(SUM(reward_earned), 0.00) as rewards_paid_today
             FROM task_completions 
             WHERE completed_at >= CURDATE()
         ");
@@ -51,11 +51,11 @@ class AdminController {
         // 3. Financial Flow Metrics (Deposits & Withdrawals)
         $financeStmt = $pdo->query("
             SELECT 
-                COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'approved' THEN amount ELSE 0 END), 0) as total_approved_deposits,
-                COALESCE(SUM(CASE WHEN type = 'withdraw' AND status = 'approved' THEN amount ELSE 0 END), 0) as total_approved_withdrawals,
-                COALESCE(SUM(CASE WHEN type = 'subscription_fee' AND status = 'approved' THEN amount ELSE 0 END), 0) as total_subscription_revenue,
-                SUM(CASE WHEN type = 'deposit' AND status = 'pending' THEN 1 ELSE 0 END) as pending_deposits_count,
-                SUM(CASE WHEN type = 'withdraw' AND status = 'pending' THEN 1 ELSE 0 END) as pending_withdrawals_count
+                COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'approved' THEN amount ELSE 0.00 END), 0.00) as total_approved_deposits,
+                COALESCE(SUM(CASE WHEN type = 'withdraw' AND status = 'approved' THEN amount ELSE 0.00 END), 0.00) as total_approved_withdrawals,
+                COALESCE(SUM(CASE WHEN type = 'subscription_fee' AND status = 'approved' THEN amount ELSE 0.00 END), 0.00) as total_subscription_revenue,
+                COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'pending' THEN 1 ELSE 0 END), 0) as pending_deposits_count,
+                COALESCE(SUM(CASE WHEN type = 'withdraw' AND status = 'pending' THEN 1 ELSE 0 END), 0) as pending_withdrawals_count
             FROM transactions
         ");
         $finance = $financeStmt->fetch();

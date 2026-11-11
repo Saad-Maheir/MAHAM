@@ -326,11 +326,11 @@ const Admin = (() => {
             document.getElementById('stat-active-users').textContent = `${data.users.active} نشط`;
             document.getElementById('stat-system-balance').textContent = `${Number(data.users.total_system_balance).toLocaleString('en-US')} د.ع`;
             document.getElementById('stat-today-tasks').textContent = data.tasks.completed_today.toLocaleString('en-US');
-            document.getElementById('stat-today-rewards').textContent = `${Number(data.tasks.rewards_paid_today).toLocaleString('en-US')} د.ع`;
+            document.getElementById('stat-today-rewards').textContent = `${Number(data.tasks.rewards_paid_today).toLocaleString('en-US')} د.ع مكافآت`;
             document.getElementById('stat-total-deposits').textContent = `${Number(data.financials.total_deposits).toLocaleString('en-US')} د.ع`;
             document.getElementById('stat-total-withdrawals').textContent = `${Number(data.financials.total_withdrawals).toLocaleString('en-US')} د.ع`;
             
-            // Sync Pending Badges (Desktop & Mobile) - strictly hide if 0
+            // Sync Pending Badges (Desktop & Mobile) - strictly hide if 0 or empty
             const depBadge = document.getElementById('stat-pending-deposits-badge');
             const mobDepBadge = document.getElementById('mob-stat-pending-deposits-badge');
             const withBadge = document.getElementById('stat-pending-withdrawals-badge');
@@ -340,19 +340,19 @@ const Admin = (() => {
 
             if (depBadge) {
                 depBadge.textContent = pendingDeps;
-                depBadge.classList.toggle('hidden', pendingDeps === 0);
+                depBadge.classList.toggle('hidden', pendingDeps <= 0);
             }
             if (mobDepBadge) {
                 mobDepBadge.textContent = pendingDeps;
-                mobDepBadge.classList.toggle('hidden', pendingDeps === 0);
+                mobDepBadge.classList.toggle('hidden', pendingDeps <= 0);
             }
             if (withBadge) {
                 withBadge.textContent = pendingWiths;
-                withBadge.classList.toggle('hidden', pendingWiths === 0);
+                withBadge.classList.toggle('hidden', pendingWiths <= 0);
             }
             if (mobWithBadge) {
                 mobWithBadge.textContent = pendingWiths;
-                mobWithBadge.classList.toggle('hidden', pendingWiths === 0);
+                mobWithBadge.classList.toggle('hidden', pendingWiths <= 0);
             }
 
             document.getElementById('stat-vip-subs').textContent = data.vip.active_subscriptions.toLocaleString('en-US');

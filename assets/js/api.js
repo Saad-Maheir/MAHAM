@@ -680,18 +680,26 @@ const API = (() => {
                 const users = getStore('users_db', []);
                 const txs = getStore('transactions_db', []);
                 const tasks = getStore('tasks_db', []);
+                
+                // Strictly count actual users, excluding admin accounts
+                const regularUsers = users.filter(u => u.role !== 'admin');
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const todayRewards = txs.filter(t => t.type === 'task_reward' && (t.created_at || '').startsWith(todayStr));
+                const completedToday = todayRewards.length;
+                const rewardsPaidToday = todayRewards.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
                 return {
                     success: true,
                     data: {
                         users: {
-                            total: users.length,
-                            active: users.filter(u => u.status !== 'suspended').length,
-                            total_system_balance: users.reduce((acc, u) => acc + (Number(u.balance) || 0), 0)
+                            total: regularUsers.length,
+                            active: regularUsers.filter(u => u.status !== 'suspended').length,
+                            total_system_balance: regularUsers.reduce((acc, u) => acc + (Number(u.balance) || 0), 0)
                         },
                         tasks: {
                             total: tasks.length,
-                            completed_today: 12,
-                            rewards_paid_today: 3000
+                            completed_today: completedToday,
+                            rewards_paid_today: rewardsPaidToday
                         },
                         financials: {
                             total_deposits: txs.filter(t => t.type === 'deposit' && t.status === 'approved').reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
@@ -700,7 +708,7 @@ const API = (() => {
                             pending_withdrawals: txs.filter(t => t.type === 'withdraw' && t.status === 'pending').length
                         },
                         vip: {
-                            active_subscriptions: users.filter(u => u.tier && u.tier.is_vip).length
+                            active_subscriptions: regularUsers.filter(u => u.tier && u.tier.is_vip).length
                         }
                     }
                 };
