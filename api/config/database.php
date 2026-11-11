@@ -313,7 +313,7 @@ class Database {
             if ($userCheck && count($userCheck->fetchAll()) === 0) {
                 $pdo->exec("
                     INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `balance`, `pending_balance`, `free_tasks_used`, `is_verified`, `status`)
-                    VALUES (2, 'سعد ماهر سعد', 'user@maham.iq', '07812345678', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'user', 25000.00, 0.00, 0, 1, 'active')
+                    VALUES (2, 'سعد ماهر سعد', 'user@maham.iq', '07812345678', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'user', 0.00, 0.00, 0, 1, 'active')
                     ON DUPLICATE KEY UPDATE `status` = 'active';
                 ");
             }
@@ -343,11 +343,6 @@ class Database {
             } catch (Exception $e) {
                 // Non-blocking fallback
             }
-        } catch (Exception $migrationError) {
-            // Graceful fallback to avoid interrupting request processing
-            error_log("MAHAM AutoMigrate Notice: " . $migrationError->getMessage());
-        }
-    }
         } catch (Exception $migrationError) {
             // Graceful fallback to avoid interrupting request processing
             error_log("MAHAM AutoMigrate Notice: " . $migrationError->getMessage());
