@@ -45,10 +45,32 @@ class TaskController {
             $vipDailySum += (float)$s['daily_profit_rate'];
         }
 
-        // Cumulative Reward Rate: Base 250 IQD + sum of active VIP tiers
-        $taskRewardRate = $isVip ? (250.0 + $vipDailySum) : 250.0;
+        // 3. Fetch active tasks catalog (Strict isolation: All public tasks + tasks specific to this authenticated user only)
+        $taskStmt = $pdo->prepare("
+            SELECT id, title, description, category, target_url, attachment_url, target_type, target_user_id, reward_amount, required_seconds, min_vip_level
+            FROM tasks
+            WHERE is_active = 1
+              AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id))
+            ORDER BY id DESC
+        ");
+        $taskStmt->execute(['user_id' => $user['id']]);
+        $tasks = $taskStmt->fetchAll();
 
-        // 2. Compute 24-Hour Cooldown (Applies to both Free and VIP)
+        // Calculate dynamic reward per task based on actual reward_amount from tasks table + VIP tier bonus
+        $baseTaskReward = 250.0;
+        if (!empty($tasks)) {
+            $baseTaskReward = (float)$tasks[0]['reward_amount'];
+            foreach ($tasks as &$t) {
+                $base = (float)$t['reward_amount'];
+                $t['calculated_reward'] = $base + ($isVip ? $vipDailySum : 0.0);
+            }
+            unset($t);
+        }
+
+        // Cumulative Reward Rate: actual base task reward + sum of active VIP tiers
+        $taskRewardRate = $baseTaskReward + ($isVip ? $vipDailySum : 0.0);
+
+        // 2. Compute 24-Hour Cooldown (Strict: 1 task every 24 hours starting from last_task_completed_at)
         $freeLimit = 5;
         $freeUsed  = (int)$user['free_tasks_used'];
         $freeRemaining = max(0, $freeLimit - $freeUsed);
@@ -67,23 +89,12 @@ class TaskController {
             }
         }
 
-        // Execution readiness check
+        // Execution readiness check (Free limited to 5 tasks total, VIP unlimited ∞; both subject to 24h cooldown)
         if ($isVip) {
             $canExecute = ($cooldownRemainingSeconds === 0);
         } else {
             $canExecute = ($freeRemaining > 0 && $cooldownRemainingSeconds === 0);
         }
-
-        // 3. Fetch active tasks catalog (Strict isolation: All public tasks + tasks specific to this authenticated user only)
-        $taskStmt = $pdo->prepare("
-            SELECT id, title, description, category, target_url, attachment_url, target_type, target_user_id, reward_amount, required_seconds, min_vip_level
-            FROM tasks
-            WHERE is_active = 1
-              AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id))
-            ORDER BY id DESC
-        ");
-        $taskStmt->execute(['user_id' => $user['id']]);
-        $tasks = $taskStmt->fetchAll();
 
         // 4. Fetch tasks completed by user today to display progress
         $todayStart = date('Y-m-d 00:00:00');
@@ -127,13 +138,21 @@ class TaskController {
 
         $pdo = Database::getConnection();
 
-        // Verify Task Exists
-        $taskStmt = $pdo->prepare("SELECT id, title, description, target_url, reward_amount, required_seconds, min_vip_level FROM tasks WHERE id = :id AND is_active = 1 LIMIT 1");
-        $taskStmt->execute(['id' => $taskId]);
+        // Verify Task Exists with strict user isolation
+        $taskStmt = $pdo->prepare("SELECT id, title, description, target_url, reward_amount, required_seconds, min_vip_level FROM tasks WHERE id = :id AND is_active = 1 AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id)) LIMIT 1");
+        $taskStmt->execute(['id' => $taskId, 'user_id' => $user['id']]);
         $task = $taskStmt->fetch();
 
         if (!$task) {
             Response::error('المهمة المطلوبة غير متوفرة حالياً.');
+        }
+
+        // Prevent completing the same task twice on the same calendar day
+        $todayStart = date('Y-m-d 00:00:00');
+        $dupStmt = $pdo->prepare("SELECT id FROM task_completions WHERE user_id = :user_id AND task_id = :task_id AND completed_at >= :today_start LIMIT 1");
+        $dupStmt->execute(['user_id' => $user['id'], 'task_id' => $taskId, 'today_start' => $todayStart]);
+        if ($dupStmt->fetch()) {
+            Response::error('لقد قمت بإنجاز هذه المهمة بالفعل اليوم! يرجى اختيار مهمة أخرى أو الانتظار لموعد التحديث القادم.');
         }
 
         // Fetch active VIP subscriptions (Cumulative)
@@ -165,12 +184,12 @@ class TaskController {
             Response::error('لقد استنفدت كامل حصة المهام المجانية (5 مهام). يرجى الاشتراك في إحدى باقات VIP لمتابعة الأرباح.', 422);
         }
 
-        // Calculate Cumulative Reward Amount
+        // Calculate Cumulative Reward Amount based on actual reward_amount from tasks table + VIP return
         $vipDailySum = 0.0;
         foreach ($activeSubs as $s) {
             $vipDailySum += (float)$s['daily_profit_rate'];
         }
-        $rewardAmount = $isVip ? (250.0 + $vipDailySum) : 250.0;
+        $rewardAmount = (float)$task['reward_amount'] + ($isVip ? $vipDailySum : 0.0);
 
         // Generate Cryptographic Verification Token
         $verificationToken = bin2hex(random_bytes(32));
@@ -268,12 +287,26 @@ class TaskController {
                 throw new RuntimeException("تم استنفاد جميع المهام المجانية المتاحة لهذا الحساب. يرجى الاشتراك في إحدى باقات VIP.");
             }
 
-            // Calculate Cumulative Reward Amount
+            // Fetch task details for exact reward_amount recorded in tasks table with strict user isolation
+            $taskInfoStmt = $pdo->prepare("SELECT reward_amount FROM tasks WHERE id = :task_id AND is_active = 1 AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id)) LIMIT 1");
+            $taskInfoStmt->execute(['task_id' => $taskId, 'user_id' => $user['id']]);
+            $taskDb = $taskInfoStmt->fetch();
+            $baseTaskReward = $taskDb ? (float)$taskDb['reward_amount'] : (float)($activeSessionTask['reward_amount'] ?? 250.0);
+
+            // Prevent duplicate completion of the same task today
+            $todayStart = date('Y-m-d 00:00:00');
+            $dupCompStmt = $pdo->prepare("SELECT id FROM task_completions WHERE user_id = :user_id AND task_id = :task_id AND completed_at >= :today_start LIMIT 1");
+            $dupCompStmt->execute(['user_id' => $user['id'], 'task_id' => $taskId, 'today_start' => $todayStart]);
+            if ($dupCompStmt->fetch()) {
+                throw new RuntimeException("تم تسجيل إنجاز هذه المهمة بالفعل لهذا اليوم مسبقاً.");
+            }
+
+            // Calculate Cumulative Reward Amount based on actual task reward + active VIP tiers
             $vipDailySum = 0.0;
             foreach ($activeSubs as $s) {
                 $vipDailySum += (float)$s['daily_profit_rate'];
             }
-            $rewardAmount = $isVip ? (250.0 + $vipDailySum) : 250.0;
+            $rewardAmount = $baseTaskReward + ($isVip ? $vipDailySum : 0.0);
 
             $currentBalance = (float)$lockedUser['balance'];
             $newBalance     = $currentBalance + $rewardAmount;

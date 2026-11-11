@@ -81,7 +81,8 @@ header h1, header .current-user-name {
 }
 
 /* OPTIONAL LIGHT MODE OVERRIDES */
-html.light {
+html.light,
+html:not(.dark) {
     --color-bg: #f8fafc;
     --color-surface: #ffffff;
     --color-surface-hover: #f1f5f9;
@@ -90,66 +91,147 @@ html.light {
     color-scheme: light;
 }
 
-html.light body {
-    background-color: #f8fafc;
-    color: #1e293b;
+html.light body,
+html:not(.dark) body {
+    background-color: #f8fafc !important;
+    color: #1e293b !important;
 }
 
-html.light header {
+html.light header,
+html:not(.dark) header {
     background-color: rgba(255, 255, 255, 0.95) !important;
     border-color: #e2e8f0 !important;
 }
 
-html.light header h1, html.light header .current-user-name {
+html.light header h1, html.light header .current-user-name,
+html:not(.dark) header h1, html:not(.dark) header .current-user-name {
     color: #0f172a !important;
 }
 
-html.light .glass-panel {
+html.light .glass-panel,
+html:not(.dark) .glass-panel {
     background: #ffffff !important;
     border-color: #e2e8f0 !important;
     color: #1e293b !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
-html.light .glass-panel .text-white {
+html.light .glass-panel .text-white,
+html:not(.dark) .glass-panel .text-white {
     color: #0f172a !important;
 }
 
-html.light .glass-panel .text-slate-400 {
+html.light .glass-panel .text-slate-400,
+html:not(.dark) .glass-panel .text-slate-400 {
     color: #64748b !important;
 }
 
-html.light .glass-panel .text-slate-300 {
+html.light .glass-panel .text-slate-300,
+html:not(.dark) .glass-panel .text-slate-300 {
     color: #334155 !important;
 }
 
 html.light input,
 html.light select,
-html.light textarea {
+html.light textarea,
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
     background-color: #f8fafc !important;
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
 }
 
 html.light input::placeholder,
-html.light textarea::placeholder {
+html.light textarea::placeholder,
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
     color: #94a3b8 !important;
 }
 
-html.light .bg-slate-900 {
-    background-color: #f8fafc !important;
-    border-color: #e2e8f0 !important;
-}
-
-html.light .bg-slate-800 {
+html.light .bg-slate-900,
+html:not(.dark) .bg-slate-900,
+html.light .bg-slate-800,
+html:not(.dark) .bg-slate-800 {
     background-color: #f1f5f9 !important;
     color: #1e293b !important;
     border-color: #cbd5e1 !important;
 }
 
 html.light .border-slate-800,
-html.light .border-slate-700 {
+html.light .border-slate-700,
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-700 {
     border-color: #e2e8f0 !important;
+}
+
+/* FinTech Bank Card: Preserves High-Contrast White & Emerald in All Modes */
+.fintech-card,
+.fintech-card * {
+    color: #ffffff !important;
+}
+.fintech-card .currency-iqd {
+    color: #34d399 !important;
+}
+
+/* Profile Support Box Light Mode Polish */
+html.light #view-profile a,
+html:not(.dark) #view-profile a {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+html.light #view-profile a span,
+html:not(.dark) #view-profile a span {
+    color: #0f172a !important;
+}
+html.light #view-profile a span.text-sky-600,
+html:not(.dark) #view-profile a span.text-sky-600,
+html.light #view-profile a span.dark\:text-sky-400,
+html:not(.dark) #view-profile a span.dark\:text-sky-400 {
+    color: #0284c7 !important;
+}
+
+/* Asiacell Instructions Banner Light Mode Contrast */
+html.light #asiacell-instructions-box,
+html:not(.dark) #asiacell-instructions-box {
+    background-color: #faf5ff !important;
+    border-color: #e9d5ff !important;
+}
+html.light #asiacell-instructions-box h4,
+html:not(.dark) #asiacell-instructions-box h4 {
+    color: #7e22ce !important;
+}
+html.light #asiacell-instructions-box p,
+html:not(.dark) #asiacell-instructions-box p {
+    color: #581c87 !important;
+}
+
+/* Quick Deposit Amount Buttons Light Mode Contrast */
+html.light #wallet-deposit-view button.font-mono,
+html:not(.dark) #wallet-deposit-view button.font-mono,
+html.light button[onclick^="Wallet.setDepositAmount"],
+html:not(.dark) button[onclick^="Wallet.setDepositAmount"] {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Payment Method Buttons Light Mode Contrast (MasterCard vs Asiacell) */
+html.light #method-btn-mastercard:not(.border-emerald-500),
+html:not(.dark) #method-btn-mastercard:not(.border-emerald-500),
+html.light #method-btn-asiacell:not(.border-emerald-500),
+html:not(.dark) #method-btn-asiacell:not(.border-emerald-500) {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+html.light #method-btn-mastercard:not(.border-emerald-500) span.block,
+html:not(.dark) #method-btn-mastercard:not(.border-emerald-500) span.block,
+html.light #method-btn-asiacell:not(.border-emerald-500) span.block,
+html:not(.dark) #method-btn-asiacell:not(.border-emerald-500) span.block {
+    color: #0f172a !important;
 }
 
 html.light .mobile-bottom-nav,
@@ -190,8 +272,26 @@ html:not(.dark) aside .bg-slate-900 {
 
 html:not(.dark) main h2,
 html:not(.dark) main h3,
-html:not(.dark) main h4 {
+html:not(.dark) main h4,
+html.light main h2,
+html.light main h3,
+html.light main h4 {
     color: #0f172a !important;
+}
+
+html:not(.dark) #stat-total-withdrawals,
+html.light #stat-total-withdrawals {
+    color: #0f172a !important;
+}
+
+html:not(.dark) #stat-total-users,
+html.light #stat-total-users {
+    color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-200,
+html.light .text-slate-200 {
+    color: #1e293b !important;
 }
 
 html:not(.dark) .glass-panel {
@@ -343,6 +443,16 @@ html.light ::-webkit-scrollbar-thumb:hover {
     z-index: 10000001 !important;
 }
 
+#auth-modal input {
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+    letter-spacing: normal !important;
+}
+
+#auth-modal input::placeholder {
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+    letter-spacing: normal !important;
+}
+
 .splash-emblem {
     animation: emblemPulse 1.8s ease-in-out infinite alternate;
 }
@@ -376,6 +486,36 @@ html.light ::-webkit-scrollbar-thumb:hover {
 /* ========================================================================= */
 /* FLOATING BOTTOM NAVIGATION BAR (Strict Viewport Docking) */
 /* ========================================================================= */
+/* Strict hiding of mobile bottom navigation bar on desktop, when hidden, or when splash screen is active */
+@media (min-width: 768px) {
+    .mobile-bottom-nav,
+    #mobile-bottom-nav {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    main {
+        padding-bottom: 115px !important;
+    }
+}
+
+.mobile-bottom-nav.hidden,
+#mobile-bottom-nav.hidden,
+#splash-screen ~ .mobile-bottom-nav,
+#splash-screen ~ #mobile-bottom-nav,
+#splash-screen ~ * .mobile-bottom-nav,
+#splash-screen ~ * #mobile-bottom-nav,
+body:has(#splash-screen) .mobile-bottom-nav,
+body:has(#splash-screen) #mobile-bottom-nav,
+body:has(#splash-screen:not(.splash-exit)) .mobile-bottom-nav,
+body:has(#splash-screen:not(.splash-exit)) #mobile-bottom-nav {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .mobile-bottom-nav {
     position: fixed !important;
     bottom: 14px !important;

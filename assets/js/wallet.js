@@ -8,6 +8,8 @@ const Wallet = (() => {
     let officialAccounts = {};
     let selectedPaymentMethod = 'asiacell';
     let selectedReceiptFile = null;
+    let serverMinDeposit = 5000;
+    let serverMinWithdraw = 10000;
 
     /**
      * Load Wallet Data & Transactions Ledger
@@ -19,36 +21,52 @@ const Wallet = (() => {
                 API.get('wallet/transactions')
             ]);
 
-            const balances = balanceRes.data;
+            const balances = (balanceRes && balanceRes.data) ? balanceRes.data : {};
             officialAccounts = balances.official_accounts || {};
-            const transactions = txRes.data.transactions || [];
+            const transactions = (txRes && txRes.data && txRes.data.transactions) ? txRes.data.transactions : [];
+
+            // 1. Update Asiacell instructions dynamically from server response
+            const asiacellInst = balances.asiacell_instructions || (officialAccounts.asiacell && officialAccounts.asiacell.instructions);
+            if (asiacellInst) {
+                const asiaP = document.querySelector('#asiacell-instructions-box p');
+                if (asiaP) asiaP.textContent = asiacellInst;
+            }
+
+            // 2. Update Mastercard account number & holder dynamically from server response
+            const mcNumber = balances.mastercard_number || (officialAccounts.mastercard && officialAccounts.mastercard.account);
+            if (mcNumber) {
+                const mcNumEl = document.getElementById('official-account-number');
+                if (mcNumEl) mcNumEl.textContent = mcNumber;
+            }
+
+            const mcHolder = balances.mastercard_holder || (officialAccounts.mastercard && officialAccounts.mastercard.title);
+            if (mcHolder) {
+                const mcHolderEl = document.getElementById('official-account-name');
+                if (mcHolderEl) mcHolderEl.textContent = mcHolder;
+            }
+
+            // 3. Update min deposit & min withdraw dynamically in form input attributes
+            serverMinDeposit = Number(balances.min_deposit || balances.min_deposit_iqd || 5000);
+            serverMinWithdraw = Number(balances.min_withdraw || balances.min_withdraw_iqd || 10000);
+
+            const depInput = document.getElementById('deposit-amount-input');
+            if (depInput) {
+                depInput.min = serverMinDeposit;
+                depInput.placeholder = `مثال: ${serverMinDeposit.toLocaleString('en-US')} أو ${(serverMinDeposit * 5).toLocaleString('en-US')}`;
+            }
+
+            const withInput = document.getElementById('withdraw-amount-input');
+            if (withInput) {
+                withInput.min = serverMinWithdraw;
+                withInput.placeholder = `الحد الأدنى ${serverMinWithdraw.toLocaleString('en-US')} د.ع`;
+            }
 
             renderBalanceCards(balances);
             selectMethod(selectedPaymentMethod);
             renderTransactionsTable(transactions);
         } catch (err) {
-            console.warn('API unavailable, utilizing fallback wallet state:', err);
-            officialAccounts = {
-                asiacell: {
-                    title: 'شحن فوري عبر كروت تعبئة آسيا سيل',
-                    account: 'كارت شحن 14 رقماً',
-                    instructions: 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع'
-                },
-                mastercard: {
-                    title: 'شركة مهام للخدمات المالية ذ.م.م',
-                    account: '5300 1234 5678 9012',
-                    instructions: 'قم بالتحويل إلى رقم الماستر كارد أعلاه ثم أرفق صورة إشعار التحويل المالي'
-                }
-            };
-            const fallbackBalances = {
-                available_balance: 0,
-                pending_balance: 0,
-                total_withdrawn: 0,
-                official_accounts: officialAccounts
-            };
-            renderBalanceCards(fallbackBalances);
-            selectMethod(selectedPaymentMethod);
-            renderTransactionsTable([]);
+            console.error('Wallet load error:', err);
+            App.toast(err.message || 'تعذر الاتصال بالخادم لجلب بيانات المحفظة. يرجى التحقق من اتصال الإنترنت.', 'error');
         }
     };
 
@@ -274,8 +292,9 @@ const Wallet = (() => {
         const amount = Number(amountInput.value);
         const ref = refInput.value.trim();
 
-        if (!amount || amount < 5000) {
-            App.toast('الحد الأدنى للإيداع هو 5,000 د.ع.', 'error');
+        const minDeposit = serverMinDeposit || Number(amountInput.min) || 5000;
+        if (!amount || amount < minDeposit) {
+            App.toast(`الحد الأدنى للإيداع هو ${minDeposit.toLocaleString('en-US')} د.ع.`, 'error');
             return;
         }
 
@@ -323,7 +342,10 @@ const Wallet = (() => {
             if (previewContainer) previewContainer.classList.add('hidden');
             selectedReceiptFile = null;
 
-            load(); // Reload ledger
+            await load(); // Reload ledger
+            API.get('auth/me').then(r => {
+                if (r && r.data) App.syncUserProfileUi(r.data);
+            }).catch(() => {});
         } catch (err) {
             App.toast(err.message, 'error');
         } finally {
@@ -344,8 +366,9 @@ const Wallet = (() => {
         const amount = Number(amountInput.value);
         const receiver = receiverInput.value.trim().replace(/[\s\-]/g, '');
 
-        if (!amount || amount < 5000) {
-            App.toast('الحد الأدنى لسحب الأرباح هو 5,000 د.ع.', 'error');
+        const minWithdraw = serverMinWithdraw || Number(amountInput.min) || 10000;
+        if (!amount || amount < minWithdraw) {
+            App.toast(`الحد الأدنى لسحب الأرباح هو ${minWithdraw.toLocaleString('en-US')} د.ع.`, 'error');
             return;
         }
 
@@ -375,7 +398,10 @@ const Wallet = (() => {
             amountInput.value = '';
             receiverInput.value = '';
 
-            load(); // Refresh wallet and transactions
+            await load(); // Refresh wallet and transactions
+            API.get('auth/me').then(r => {
+                if (r && r.data) App.syncUserProfileUi(r.data);
+            }).catch(() => {});
         } catch (err) {
             App.toast(err.message, 'error');
         } finally {
@@ -403,47 +429,52 @@ const Wallet = (() => {
         }
 
         tbody.innerHTML = transactions.map((tx) => {
+            const typeText = tx.type_text || (tx.type === 'deposit' ? 'إيداع رصيد' : tx.type === 'withdraw' ? 'سحب أرباح' : tx.type === 'task_reward' ? 'مكافأة مهمة يومية' : 'اشتراك باقة VIP');
+            const statusText = tx.status_text || (tx.status === 'approved' ? 'مكتمل ومضاف' : tx.status === 'pending' ? 'قيد التدقيق' : 'مرفوض');
+            const formattedDate = tx.formatted_date || (tx.created_at ? String(tx.created_at).substring(0, 16).replace('T', ' ') : 'الآن');
+            const paymentMethodText = tx.payment_method_text || (tx.payment_method === 'asiacell' ? 'كارت آسيا سيل' : tx.payment_method === 'mastercard' ? 'ماستر كارد' : (tx.payment_method || 'محفظة النظام'));
+
             let statusBadge = '';
             if (tx.status === 'approved') {
                 statusBadge = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                        ${tx.status_text}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        ${statusText}
                     </span>
                 `;
             } else if (tx.status === 'pending') {
                 statusBadge = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                        ${tx.status_text}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        ${statusText}
                     </span>
                 `;
             } else {
                 statusBadge = `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                        <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                        ${tx.status_text}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        ${statusText}
                     </span>
                 `;
             }
 
             const isCredit = ['deposit', 'task_reward'].includes(tx.type);
             const amountPrefix = isCredit ? '+' : '-';
-            const amountColor = isCredit ? 'text-emerald-400' : 'text-rose-400';
+            const amountColor = isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
 
             return `
-                <tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition">
-                    <td class="py-3 px-4 font-medium text-slate-200">
+                <tr class="border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                    <td class="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
                         <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full ${isCredit ? 'bg-emerald-400' : 'bg-rose-400'}"></span>
-                            <span>${tx.type_text}</span>
+                            <span class="w-2 h-2 rounded-full ${isCredit ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            <span>${typeText}</span>
                         </div>
-                        <span class="text-[11px] text-slate-500 block font-mono mt-0.5">${tx.formatted_date}</span>
+                        <span class="text-[11px] text-slate-500 block font-mono mt-0.5">${formattedDate}</span>
                     </td>
-                    <td class="py-3 px-4 text-slate-300 text-xs">
-                        <span class="font-bold">${tx.payment_method}</span>
-                        ${tx.tx_reference && tx.tx_reference !== '—' ? `<span class="block text-[11px] text-slate-400 font-mono mt-0.5">رقم/كارت: ${tx.tx_reference}</span>` : ''}
-                        ${tx.sender_account && tx.sender_account !== '—' && tx.sender_account !== tx.tx_reference ? `<span class="block text-[10px] text-slate-500 font-mono">${tx.sender_account}</span>` : ''}
+                    <td class="py-3 px-4 text-slate-700 dark:text-slate-300 text-xs">
+                        <span class="font-bold">${paymentMethodText}</span>
+                        ${tx.tx_reference && tx.tx_reference !== '—' ? `<span class="block text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">رقم/كارت: ${tx.tx_reference}</span>` : ''}
+                        ${tx.sender_account && tx.sender_account !== '—' && tx.sender_account !== tx.tx_reference ? `<span class="block text-[10px] text-slate-400 dark:text-slate-500 font-mono">${tx.sender_account}</span>` : ''}
                     </td>
                     <td class="py-3 px-4 font-mono font-bold ${amountColor} text-left" dir="ltr">
                         ${amountPrefix}${Number(tx.amount).toLocaleString('en-US')} <span class="text-xs">IQD</span>

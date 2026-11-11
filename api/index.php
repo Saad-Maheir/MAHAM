@@ -281,6 +281,13 @@ try {
             }
             break;
 
+        case 'admin/users/grant-vip':
+            if ($method === 'POST') {
+                CsrfMiddleware::handle();
+                AdminController::grantUserVip();
+            }
+            break;
+
         case 'admin/settings':
             if ($method === 'GET') {
                 AdminController::getSettings();

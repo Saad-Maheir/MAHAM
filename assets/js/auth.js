@@ -2,6 +2,8 @@
  * MAHAM FinTech Platform - Authentication & OTP Verification Manager
  */
 
+const GOOGLE_CLIENT_ID = window.MAHAM_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+
 const Auth = (() => {
     let resendTimer = null;
     let resendSecondsRemaining = 0;
@@ -211,34 +213,6 @@ const Auth = (() => {
                 App.navigate('home');
             }
         } catch (err) {
-            // High-Availability Fallback for Master User & Admin (Guaranteed demo access if DB/host lags)
-            const isMasterClient = (identifier === 'user@maham.iq' || identifier === '07812345678') && password === 'User@Maham2026!';
-            const isMasterAdmin = (identifier === 'admin@maham.iq' || identifier === '07800000000') && (password === 'AdminPassword2026!' || password === 'Admin@Maham2026!');
-
-            if (isMasterClient) {
-                const fallbackUser = {
-                    id: 2,
-                    full_name: 'سعد ماهر سعد',
-                    email: 'user@maham.iq',
-                    phone: '07812345678',
-                    role: 'user',
-                    balance: 25000.00,
-                    pending_balance: 0.00,
-                    is_verified: true
-                };
-                API.setAuthToken('maham_active_auth_token_usr_2');
-                App.setAuthState(fallbackUser);
-                App.syncUserProfileUi({ user: fallbackUser });
-                App.hideAuthModal();
-                App.navigate('home');
-                App.toast('تم تسجيل الدخول بنجاح للمحفظة!', 'success');
-                return;
-            } else if (isMasterAdmin) {
-                API.setAuthToken('maham_active_auth_token_adm_1');
-                window.location.href = 'admin.html';
-                return;
-            }
-
             const errorMsg = err.message || 'بيانات الدخول غير صحيحة، يرجى التأكد والمحاولة ثانية.';
             if (errorEl) {
                 errorEl.textContent = errorMsg;
@@ -490,10 +464,14 @@ const Auth = (() => {
      * Initialize Google Identity Services (GSI One-Tap / Button)
      */
     const initGoogleAuth = () => {
+        if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+            return;
+        }
+
         if (window.google && window.google.accounts && window.google.accounts.id) {
             try {
                 window.google.accounts.id.initialize({
-                    client_id: '925438812678-mahamfintech.apps.googleusercontent.com',
+                    client_id: GOOGLE_CLIENT_ID,
                     callback: handleGoogleCredentialResponse,
                     auto_select: false,
                     cancel_on_tap_outside: true
@@ -516,7 +494,7 @@ const Auth = (() => {
     };
 
     /**
-     * Google Sign-In Action Handler (Direct Trigger & High-Availability Gateway)
+     * Google Sign-In Action Handler (Strict Official Google Flow)
      */
     const handleGoogleSignIn = async () => {
         const errorEl = document.getElementById('auth-login-error');
@@ -525,51 +503,51 @@ const Auth = (() => {
             errorEl.textContent = '';
         }
 
-        // Try Google One-Tap if SDK is available
+        const isWebProtocol = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+        if (!isWebProtocol) {
+            const warningMsg = 'خدمة تسجيل الدخول عبر Google تتطلب فتح الموقع عبر نطاق ويب معتمد (http://localhost أو رابط الاستضافة الرسمي) ولا تعمل عبر بروتوكول file://.';
+            if (errorEl) {
+                errorEl.textContent = warningMsg;
+                errorEl.classList.remove('hidden');
+            }
+            App.toast(warningMsg, 'warning');
+            return;
+        }
+
+        const isConfigured = GOOGLE_CLIENT_ID && 
+                             GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com' &&
+                             GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com');
+
+        if (!isConfigured) {
+            const configMsg = 'خدمة تسجيل الدخول عبر Google تتطلب وضع Client ID الحقيقي من Google Cloud Console في assets/js/auth.js.';
+            if (errorEl) {
+                errorEl.textContent = configMsg;
+                errorEl.classList.remove('hidden');
+            }
+            App.toast(configMsg, 'warning');
+            return;
+        }
+
         if (window.google && window.google.accounts && window.google.accounts.id) {
             try {
-                let prompted = false;
                 window.google.accounts.id.prompt((notification) => {
-                    prompted = true;
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // Fallback to seamless Google authenticated session
-                        executeGoogleDirectAuth();
+                        const btnContainer = document.getElementById('google-signin-btn-container');
+                        const iframeBtn = btnContainer ? btnContainer.querySelector('div[role="button"]') : null;
+                        if (iframeBtn) {
+                            iframeBtn.click();
+                        } else {
+                            App.toast('يرجى السماح لنافذة تسجيل دخول Google المنبثقة للبدء.', 'info');
+                        }
                     }
                 });
-                setTimeout(() => {
-                    if (!prompted) executeGoogleDirectAuth();
-                }, 1500);
                 return;
             } catch (e) {
                 console.warn('Google prompt exception:', e);
             }
         }
 
-        // Seamless Direct Google Gateway
-        await executeGoogleDirectAuth();
-    };
-
-    /**
-     * Seamless Google Direct Gateway for Saad Maher Saad
-     */
-    const executeGoogleDirectAuth = async () => {
-        try {
-            App.toast('جاري تسجيل الدخول بحساب Google المعتمد...', 'info');
-            const res = await API.post('auth/google', { credential: 'google_web_auth_token' });
-            if (res.success && res.data) {
-                API.setAuthToken(res.data.auth_token);
-                App.setAuthState(res.data.user);
-                App.syncUserProfileUi(res.data);
-                App.hideAuthModal();
-                App.navigate('home');
-                App.toast(`مرحباً بك مجدداً يا ${res.data.user.full_name || 'سعد ماهر'}!`, 'success');
-                if (typeof Dashboard !== 'undefined' && Dashboard.load) {
-                    await Dashboard.load();
-                }
-            }
-        } catch (err) {
-            App.toast(err.message || 'تعذر استكمال تسجيل دخول Google.', 'error');
-        }
+        App.toast('جاري تحميل خدمة Google Identity... يرجى المحاولة بعد لحظات.', 'info');
     };
 
     /**

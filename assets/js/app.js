@@ -118,6 +118,11 @@ const App = (() => {
      */
     const runSplashSequence = () => {
         const splash = document.getElementById('splash-screen');
+        const bottomNav = document.getElementById('mobile-bottom-nav');
+        if (bottomNav) {
+            bottomNav.classList.add('hidden');
+            bottomNav.style.display = 'none';
+        }
         if (!splash) return;
 
         setTimeout(() => {
@@ -126,7 +131,6 @@ const App = (() => {
             setTimeout(() => {
                 splash.style.display = 'none';
                 if (splash.parentNode) splash.parentNode.removeChild(splash);
-                const bottomNav = document.getElementById('mobile-bottom-nav');
                 if (bottomNav && currentUser) {
                     bottomNav.classList.remove('hidden');
                     bottomNav.style.display = 'flex';
@@ -142,10 +146,14 @@ const App = (() => {
     const checkSession = async () => {
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('auth') === '1' || window.location.hash === '#login') {
+            const isRegisterIntent = urlParams.get('auth') === 'register' || window.location.hash === '#register';
+            if (urlParams.get('auth') === '1' || window.location.hash === '#login' || isRegisterIntent) {
                 currentUser = null;
                 setAuthState(null);
                 showAuthModal();
+                if (isRegisterIntent && typeof Auth !== 'undefined' && Auth.switchTab) {
+                    Auth.switchTab('register');
+                }
                 return;
             }
 
@@ -188,7 +196,7 @@ const App = (() => {
         const authModal = document.getElementById('auth-modal');
         const viewAuth = document.getElementById('view-auth');
         const mainLayout = document.getElementById('main-app-container');
-        const bottomNav = document.querySelector('.mobile-bottom-nav');
+        const bottomNav = document.getElementById('mobile-bottom-nav') || document.querySelector('.mobile-bottom-nav');
 
         if (user) {
             if (authModal) {
@@ -206,9 +214,13 @@ const App = (() => {
             }
             if (bottomNav) {
                 const splash = document.getElementById('splash-screen');
-                if (!splash || splash.style.display === 'none' || splash.classList.contains('splash-exit')) {
+                const isSplashActive = splash && !splash.classList.contains('splash-exit') && splash.style.display !== 'none';
+                if (!isSplashActive) {
                     bottomNav.classList.remove('hidden');
                     bottomNav.style.display = 'flex';
+                } else {
+                    bottomNav.classList.add('hidden');
+                    bottomNav.style.display = 'none';
                 }
             }
             loadNotifications();
@@ -472,23 +484,38 @@ const App = (() => {
         }
     };
 
-    const showAuthModal = () => {
+    const showAuthModal = (tab = 'login') => {
         const modal = document.getElementById('auth-modal');
         const viewAuth = document.getElementById('view-auth');
         const mainLayout = document.getElementById('main-app-container');
-        const bottomNav = document.querySelector('.mobile-bottom-nav');
+        const bottomNav = document.getElementById('mobile-bottom-nav') || document.querySelector('.mobile-bottom-nav');
         if (modal) {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            modal.style.display = 'flex';
         }
-        if (viewAuth) viewAuth.classList.remove('hidden');
-        if (mainLayout) mainLayout.classList.add('hidden');
-        if (bottomNav) bottomNav.classList.add('hidden');
+        if (viewAuth) {
+            viewAuth.classList.remove('hidden');
+            viewAuth.style.display = 'block';
+        }
+        if (mainLayout) {
+            mainLayout.classList.add('hidden');
+            mainLayout.style.display = 'none';
+        }
+        if (bottomNav) {
+            bottomNav.classList.add('hidden');
+            bottomNav.style.display = 'none';
+        }
+        if (typeof Auth !== 'undefined' && Auth.switchTab) {
+            Auth.switchTab(tab);
+        }
     };
 
     const hideAuthModal = () => {
         const modal = document.getElementById('auth-modal');
         const viewAuth = document.getElementById('view-auth');
+        const mainLayout = document.getElementById('main-app-container');
+        const bottomNav = document.getElementById('mobile-bottom-nav') || document.querySelector('.mobile-bottom-nav');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -497,6 +524,14 @@ const App = (() => {
         if (viewAuth) {
             viewAuth.classList.add('hidden');
             viewAuth.style.display = 'none';
+        }
+        if (mainLayout) {
+            mainLayout.classList.remove('hidden');
+            mainLayout.style.display = 'block';
+        }
+        if (bottomNav && currentUser) {
+            bottomNav.classList.remove('hidden');
+            bottomNav.style.display = 'flex';
         }
     };
 
@@ -582,7 +617,10 @@ const App = (() => {
                 notificationsList = res.data.notifications || [];
                 const unreadDot = document.getElementById('header-unread-dot');
                 if (unreadDot) {
-                    if (res.data.unread_count > 0 && notificationsList.length > 0) {
+                    const latestId = notificationsList.length > 0 ? Number(notificationsList[0].id) : 0;
+                    const userId = currentUser ? currentUser.id : 'guest';
+                    const lastSeenId = Number(localStorage.getItem('maham_last_seen_notif_' + userId) || 0);
+                    if (latestId > lastSeenId) {
                         unreadDot.classList.remove('hidden');
                     } else {
                         unreadDot.classList.add('hidden');
@@ -614,9 +652,13 @@ const App = (() => {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
 
-        if (unreadDot) unreadDot.classList.add('hidden');
-
         await loadNotifications();
+
+        if (unreadDot) unreadDot.classList.add('hidden');
+        if (notificationsList && notificationsList.length > 0 && currentUser) {
+            const latestId = Number(notificationsList[0].id);
+            localStorage.setItem('maham_last_seen_notif_' + currentUser.id, String(latestId));
+        }
 
         if (!container) return;
 

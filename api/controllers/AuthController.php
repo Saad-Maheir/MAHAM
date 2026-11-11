@@ -105,7 +105,7 @@ class AuthController {
             $userStmt->execute(['id' => $userId]);
             $newUser = $userStmt->fetch();
 
-            Response::success('تم إنشاء حسابك وتفعيله بنجاح! مرحباً بك في عامل المهام.', [
+            Response::success('تم إنشاء حسابك وتفعيله بنجاح! مرحباً بك في منصة مهام.', [
                 'requires_otp' => false,
                 'auth_token'   => $authToken,
                 'user' => [
@@ -443,15 +443,31 @@ class AuthController {
             $vipDailySum += (float)$sub['daily_profit_rate'];
         }
 
+        // Fetch base task reward dynamically from tasks table (or fallback to app_settings free_task_reward)
+        $taskRewardStmt = $pdo->prepare("
+            SELECT reward_amount 
+            FROM tasks 
+            WHERE is_active = 1 AND (target_type = 'all' OR (target_type = 'specific' AND target_user_id = :user_id)) 
+            ORDER BY id DESC 
+            LIMIT 1
+        ");
+        $taskRewardStmt->execute(['user_id' => $user['id']]);
+        $taskRow = $taskRewardStmt->fetch();
+
+        if ($taskRow && isset($taskRow['reward_amount'])) {
+            $baseTaskReward = (float)$taskRow['reward_amount'];
+        } else {
+            $settingStmt = $pdo->query("SELECT setting_value FROM app_settings WHERE setting_key = 'free_task_reward' LIMIT 1");
+            $settingRow = $settingStmt ? $settingStmt->fetch() : null;
+            $baseTaskReward = $settingRow ? (float)$settingRow['setting_value'] : 250.0;
+        }
+
+        $taskRewardRate = $baseTaskReward + ($isVip ? $vipDailySum : 0.0);
+        $totalDailyProfit = $taskRewardRate;
+
         if ($isVip) {
-            // Cumulative: Base 250 IQD + sum of all active VIP tiers
-            $taskRewardRate = 250.0 + $vipDailySum;
-            $totalDailyProfit = $taskRewardRate;
             $tasksRemainingDisplay = '∞';
         } else {
-            // Free Base Tier: 250 IQD default per task, up to 5 lifetime free tasks
-            $taskRewardRate = 250.0;
-            $totalDailyProfit = 250.0;
             $freeTasksLimit = 5;
             $freeTasksUsed = (int)$user['free_tasks_used'];
             $freeRemaining = max(0, $freeTasksLimit - $freeTasksUsed);
@@ -572,6 +588,11 @@ class AuthController {
             }
         }
 
+        // 4. Verify Google Email Verification Flag
+        if (isset($jwtPayload['email_verified']) && $jwtPayload['email_verified'] !== true && $jwtPayload['email_verified'] !== 'true' && $jwtPayload['email_verified'] !== 1) {
+            Response::error('البريد الإلكتروني لحساب Google غير مؤكد.', 403);
+        }
+
         $email     = filter_var(trim((string)$jwtPayload['email']), FILTER_VALIDATE_EMAIL);
         $name      = Validator::sanitize($jwtPayload['name'] ?? 'مستخدم Google');
         $googleId  = Validator::sanitize($jwtPayload['sub'] ?? '');
@@ -612,10 +633,10 @@ class AuthController {
                 $pdo->prepare($updSql)->execute($params);
             }
         } else {
-            // Register new verified user automatically via Google
+            // Register new verified user automatically via Google with initial balance 0.00
             $ins = $pdo->prepare("
-                INSERT INTO users (full_name, email, phone, google_id, avatar_url, role, balance, pending_balance, is_verified, status)
-                VALUES (:name, :email, NULL, :gid, :avatar, 'user', 0.00, 0.00, 1, 'active')
+                INSERT INTO users (full_name, email, phone, google_id, avatar_url, role, balance, pending_balance, free_tasks_used, is_verified, status)
+                VALUES (:name, :email, NULL, :gid, :avatar, 'user', 0.00, 0.00, 0, 1, 'active')
             ");
             $ins->execute([
                 'name'   => $name,

@@ -264,7 +264,7 @@ const Dashboard = (() => {
 
         const html = tasks.map((task) => {
             const isCompletedToday = completedIds.includes(Number(task.id));
-            const reward = userState.is_vip ? userState.current_reward_per_task : Number(task.reward_amount);
+            const reward = (task.calculated_reward !== undefined) ? Number(task.calculated_reward) : (userState.is_vip ? Number(userState.current_reward_per_task) : Number(task.reward_amount));
 
             let actionButtonHtml = '';
             if (isCompletedToday) {
@@ -462,6 +462,15 @@ const Dashboard = (() => {
             closeTaskModal();
             
             // Immediate real-time sync across dashboard
+            try {
+                const meRes = await API.get('auth/me');
+                if (meRes && meRes.data) {
+                    App.syncUserProfileUi(meRes.data);
+                }
+            } catch (syncErr) {
+                console.warn('Profile real-time balance sync exception:', syncErr);
+            }
+
             await load();
             App.navigate('home');
         } catch (err) {

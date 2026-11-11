@@ -37,35 +37,50 @@ class WalletController {
         $aggStmt->execute(['user_id' => $user['id']]);
         $aggregates = $aggStmt->fetch();
 
-        // 3. Official Deposit Destinations: Strictly Asiacell & MasterCard
+        // 3. Read official payment settings dynamically from app_settings table
+        $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM app_settings");
+        $appSettings  = $settingsStmt ? $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+
+        $mcNumber = !empty($appSettings['mastercard_number']) ? $appSettings['mastercard_number'] : env('OFFICIAL_MASTERCARD_NUMBER', '5300 1234 5678 9012');
+        $mcHolder = !empty($appSettings['mastercard_holder']) ? $appSettings['mastercard_holder'] : (!empty($appSettings['official_account_name']) ? $appSettings['official_account_name'] : env('OFFICIAL_MASTERCARD_HOLDER', 'شركة مهام للخدمات المالية ذ.م.م'));
+        $asiaInstructions = !empty($appSettings['asiacell_instructions']) ? $appSettings['asiacell_instructions'] : 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع (بدون الحاجة لرفع أي صورة إشعار).';
+        $minDeposit = !empty($appSettings['min_deposit_iqd']) ? (float)$appSettings['min_deposit_iqd'] : (float)env('MIN_DEPOSIT_IQD', 5000);
+        $minWithdraw = !empty($appSettings['min_withdraw_iqd']) ? (float)$appSettings['min_withdraw_iqd'] : (float)env('MIN_WITHDRAW_IQD', 10000);
+
+        // Official Deposit Destinations: Strictly Asiacell & MasterCard
         $officialAccounts = [
             'asiacell' => [
                 'name'         => 'آسيا سيل (Asiacell)',
                 'type'         => 'scratch_card',
                 'title'        => 'شحن فوري عبر كروت تعبئة آسيا سيل',
                 'account'      => 'كارت شحن 14 رقماً',
-                'instructions' => 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع',
+                'instructions' => $asiaInstructions,
                 'icon'         => 'asiacell'
             ],
             'mastercard' => [
                 'name'         => 'ماستر كارد (MasterCard)',
                 'type'         => 'card_transfer',
-                'title'        => env('OFFICIAL_MASTERCARD_HOLDER', 'شركة مهام للخدمات المالية ذ.م.م'),
-                'account'      => env('OFFICIAL_MASTERCARD_NUMBER', '5300 1234 5678 9012'),
+                'title'        => $mcHolder,
+                'account'      => $mcNumber,
                 'instructions' => 'قم بالتحويل إلى رقم الماستر كارد أعلاه ثم أرفق صورة إشعار التحويل المالي',
                 'icon'         => 'mastercard'
             ]
         ];
 
         Response::success('تم جلب بيانات المحفظة بنجاح.', [
-            'available_balance' => (float)$balances['balance'],
-            'pending_balance'   => (float)$balances['pending_balance'],
-            'total_withdrawn'   => (float)$aggregates['total_withdrawn'],
-            'total_deposited'   => (float)$aggregates['total_deposited'],
-            'today_earnings'    => (float)$aggregates['today_earnings'],
-            'official_accounts' => $officialAccounts,
-            'min_deposit'       => (float)env('MIN_DEPOSIT_IQD', 5000),
-            'min_withdraw'      => (float)env('MIN_WITHDRAW_IQD', 5000)
+            'available_balance'     => (float)$balances['balance'],
+            'pending_balance'       => (float)$balances['pending_balance'],
+            'total_withdrawn'       => (float)$aggregates['total_withdrawn'],
+            'total_deposited'       => (float)$aggregates['total_deposited'],
+            'today_earnings'        => (float)$aggregates['today_earnings'],
+            'official_accounts'     => $officialAccounts,
+            'mastercard_number'     => $mcNumber,
+            'mastercard_holder'     => $mcHolder,
+            'asiacell_instructions' => $asiaInstructions,
+            'min_deposit_iqd'       => $minDeposit,
+            'min_withdraw_iqd'      => $minWithdraw,
+            'min_deposit'           => $minDeposit,
+            'min_withdraw'          => $minWithdraw
         ]);
     }
 
@@ -88,13 +103,17 @@ class WalletController {
             Response::error('يرجى اختيار طريقة دفع معتمدة (آسيا سيل أو ماستر كارد).');
         }
 
-        $minDeposit = (float)env('MIN_DEPOSIT_IQD', 5000);
+        $pdo = Database::getConnection();
+
+        // Read dynamic minimum deposit from app_settings
+        $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM app_settings");
+        $appSettings  = $settingsStmt ? $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+        $minDeposit   = !empty($appSettings['min_deposit_iqd']) ? (float)$appSettings['min_deposit_iqd'] : (float)env('MIN_DEPOSIT_IQD', 5000);
+
         if (!Validator::isValidAmount($amountRaw, $minDeposit)) {
             Response::error("الحد الأدنى للإيداع هو " . number_format($minDeposit) . " د.ع.");
         }
         $amount = (float)$amountRaw;
-
-        $pdo = Database::getConnection();
         $receiptPath = null;
         $cleanReference = '';
 
@@ -215,7 +234,13 @@ class WalletController {
             Response::error('سحب الأرباح متاح حصرياً عبر بطاقات الماستر كارد (MasterCard).');
         }
 
-        $minWithdraw = (float)env('MIN_WITHDRAW_IQD', 5000);
+        $pdo = Database::getConnection();
+
+        // Read dynamic minimum withdrawal from app_settings
+        $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM app_settings");
+        $appSettings  = $settingsStmt ? $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+        $minWithdraw  = !empty($appSettings['min_withdraw_iqd']) ? (float)$appSettings['min_withdraw_iqd'] : (float)env('MIN_WITHDRAW_IQD', 10000);
+
         if (!Validator::isValidAmount($amountRaw, $minWithdraw)) {
             Response::error("الحد الأدنى لسحب الأرباح هو " . number_format($minWithdraw) . " د.ع.");
         }
@@ -226,8 +251,6 @@ class WalletController {
         if (strlen($cleanMasterCard) < 8 || strlen($cleanMasterCard) > 20) {
             Response::error('يرجى إدخال الرقم التسلسلي لبطاقة الماستر كارد (رقم البطاقة المستلمة) بدقة (8 إلى 20 رقماً).');
         }
-
-        $pdo = Database::getConnection();
 
         // Atomic Transaction: Lock Balance & Deduct Instantly
         $pdo->beginTransaction();

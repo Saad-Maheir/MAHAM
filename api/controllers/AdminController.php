@@ -703,6 +703,57 @@ class AdminController {
     }
 
     /**
+     * Grant or Upgrade VIP Package for a User
+     */
+    public static function grantUserVip(): void {
+        $admin     = AuthMiddleware::requireAdmin();
+        $userId    = (int)($_POST['user_id'] ?? 0);
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $days      = (int)($_POST['duration_days'] ?? 30);
+
+        if ($userId <= 0 || $packageId <= 0) {
+            Response::error('معرف المستخدم أو معرف الباقة غير صالح.', 422);
+        }
+
+        $pdo = Database::getConnection();
+
+        // Verify package exists
+        $pkgStmt = $pdo->prepare("SELECT id, name, price, daily_profit FROM packages WHERE id = :id LIMIT 1");
+        $pkgStmt->execute(['id' => $packageId]);
+        $pkg = $pkgStmt->fetch();
+
+        if (!$pkg) {
+            Response::error('الباقة المطلوبة غير موجودة في النظام.', 404);
+        }
+
+        // Verify user exists
+        $uStmt = $pdo->prepare("SELECT id, full_name FROM users WHERE id = :id AND role = 'user' LIMIT 1");
+        $uStmt->execute(['id' => $userId]);
+        $user = $uStmt->fetch();
+
+        if (!$user) {
+            Response::error('المستخدم غير موجود.', 404);
+        }
+
+        $expiresAt = date('Y-m-d H:i:s', strtotime("+{$days} days"));
+
+        // Insert new active subscription record with required amount_paid and starts_at
+        $insStmt = $pdo->prepare("
+            INSERT INTO user_subscriptions (user_id, package_id, amount_paid, daily_profit_rate, starts_at, expires_at, status)
+            VALUES (:user_id, :pkg_id, :paid, :rate, NOW(), :expires, 'active')
+        ");
+        $insStmt->execute([
+            'user_id' => $userId,
+            'pkg_id'  => $packageId,
+            'paid'    => (float)$pkg['price'],
+            'rate'    => (float)$pkg['daily_profit'],
+            'expires' => $expiresAt
+        ]);
+
+        Response::success("تم تفعيل ومنح {$pkg['name']} للمستخدم {$user['full_name']} بنجاح حتى {$expiresAt}.");
+    }
+
+    /**
      * Get Platform Official Settings
      */
     public static function getSettings(): void {
@@ -723,9 +774,9 @@ class AdminController {
         $pdo   = Database::getConnection();
 
         $allowedKeys = [
-            'zain_cash_number',
-            'asia_hawala_number',
-            'qi_card_number',
+            'mastercard_number',
+            'mastercard_holder',
+            'asiacell_instructions',
             'official_account_name',
             'min_deposit_iqd',
             'min_withdraw_iqd'

@@ -37,41 +37,44 @@ class Database {
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$charset} COLLATE utf8mb4_unicode_ci"
             ];
 
-            try {
-                self::$instance = new PDO($dsn, $user, $pass, $options);
-            } catch (PDOException $e) {
-                // Local development fallback (127.0.0.1 / root)
-                $isLocal = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1', '::1']) ||
-                           in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) ||
-                           php_sapi_name() === 'cli';
-                
-                if ($isLocal) {
-                    $localDatabases = ['maham', 'if0_43395665_maham', 'test'];
-                    foreach ($localDatabases as $localDb) {
-                        try {
-                            $localDsn = "mysql:host=127.0.0.1;port=3306;dbname={$localDb};charset={$charset}";
-                            self::$instance = new PDO($localDsn, 'root', '', $options);
-                            break;
-                        } catch (PDOException $eLocal) {
-                            // Try next local candidate
-                        }
-                    }
-                }
+            // 1. Check if environment is local (localhost / 127.0.0.1 / CLI)
+            $isLocal = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1', '::1']) ||
+                       in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) ||
+                       php_sapi_name() === 'cli';
 
-                if (self::$instance === null) {
+            if ($isLocal) {
+                try {
+                    $localServerDsn = "mysql:host=127.0.0.1;port=3306;charset={$charset}";
+                    $localPdo = new PDO($localServerDsn, 'root', '', $options);
+                    $localPdo->exec("CREATE DATABASE IF NOT EXISTS maham CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+                    $localPdo->exec("USE maham;");
+                    self::$instance = $localPdo;
+                } catch (PDOException $eLocal) {
+                    error_log("MAHAM Local Database Connection Attempt Failed: " . $eLocal->getMessage());
+                }
+            }
+
+            // 2. If instance is still null, proceed to configured host connection
+            if (self::$instance === null) {
+                $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset={$charset}";
+                try {
+                    self::$instance = new PDO($dsn, $user, $pass, $options);
+                } catch (PDOException $e) {
                     // Shared hosting cluster fallback (sql211.infinityfree.com -> sql211.epizy.com)
-                    if (str_contains($host, 'infinityfree.com')) {
-                        $fallbackHost = 'sql211.epizy.com';
-                        $fallbackDsn  = "mysql:host={$fallbackHost};port={$port};dbname={$dbName};charset={$charset}";
-                        try {
-                            self::$instance = new PDO($fallbackDsn, $user, $pass, $options);
-                        } catch (PDOException $e2) {
-                            error_log("MAHAM Database Primary & Fallback Failed: " . $e2->getMessage());
+                    if (self::$instance === null) {
+                        if (str_contains($host, 'infinityfree.com')) {
+                            $fallbackHost = 'sql211.epizy.com';
+                            $fallbackDsn  = "mysql:host={$fallbackHost};port={$port};dbname={$dbName};charset={$charset}";
+                            try {
+                                self::$instance = new PDO($fallbackDsn, $user, $pass, $options);
+                            } catch (PDOException $e2) {
+                                error_log("MAHAM Database Primary & Fallback Failed: " . $e2->getMessage());
+                                throw new RuntimeException("تعذر الاتصال بقاعدة البيانات. يرجى مراجعة إعدادات الخادم.");
+                            }
+                        } else {
+                            error_log("MAHAM Database Connection Failure: " . $e->getMessage());
                             throw new RuntimeException("تعذر الاتصال بقاعدة البيانات. يرجى مراجعة إعدادات الخادم.");
                         }
-                    } else {
-                        error_log("MAHAM Database Connection Failure: " . $e->getMessage());
-                        throw new RuntimeException("تعذر الاتصال بقاعدة البيانات. يرجى مراجعة إعدادات الخادم.");
                     }
                 }
             }

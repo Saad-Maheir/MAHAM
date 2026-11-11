@@ -81,8 +81,10 @@ const Admin = (() => {
     const init = async () => {
         initTheme();
         await API.initCsrf();
-        await checkAdminAuth();
-        loadAnalytics();
+        const isAuthed = await checkAdminAuth();
+        if (isAuthed) {
+            loadAnalytics();
+        }
     };
 
     /**
@@ -125,33 +127,38 @@ const Admin = (() => {
     const checkAdminAuth = async () => {
         try {
             const res = await API.get('auth/me');
-            if (!res.data || res.data.user.role !== 'admin') {
+            if (res.data && res.data.user && res.data.user.role === 'admin') {
+                currentAdmin = res.data.user;
+                const overlay = document.getElementById('admin-auth-guard');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                    overlay.style.display = 'none';
+                }
+                const nameEl = document.getElementById('admin-display-name');
+                if (nameEl) nameEl.textContent = currentAdmin.full_name;
+                return true;
+            } else {
                 showAuthRequired('يرجى تسجيل الدخول بحساب مسؤول النظام للمتابعة.');
-                return;
+                return false;
             }
-            currentAdmin = res.data.user;
-            const overlay = document.getElementById('admin-auth-guard');
-            if (overlay) {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
-            }
-            const nameEl = document.getElementById('admin-display-name');
-            if (nameEl) nameEl.textContent = currentAdmin.full_name;
         } catch (e) {
             showAuthRequired('يرجى تسجيل الدخول بحساب مسؤول للوصول للوحة التحكم.');
+            return false;
         }
     };
 
     const showAuthRequired = (msg) => {
         const overlay = document.getElementById('admin-auth-guard');
-        const text = document.getElementById('admin-guard-message');
+        const loginError = document.getElementById('admin-login-error');
         if (overlay) {
-            if (text && msg) {
-                text.textContent = msg;
-                text.classList.remove('hidden');
+            if (loginError && msg) {
+                loginError.textContent = msg;
+                loginError.classList.remove('hidden');
             }
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
+            overlay.style.display = 'flex';
         }
     };
 
@@ -178,6 +185,9 @@ const Admin = (() => {
             });
 
             if (res.data && res.data.user && res.data.user.role === 'admin') {
+                if (res.data && res.data.auth_token) {
+                    API.setAuthToken(res.data.auth_token);
+                }
                 currentAdmin = res.data.user;
                 const overlay = document.getElementById('admin-auth-guard');
                 if (overlay) {
@@ -193,22 +203,6 @@ const Admin = (() => {
                 throw new Error('عذراً، هذا الحساب لا يمتلك صلاحيات إدارة النظام.');
             }
         } catch (err) {
-            // High-Availability Fallback for Admin Command Center Access
-            if (identifier === 'admin@maham.iq' && (password === 'AdminPassword2026!' || password === 'Admin@Maham2026!')) {
-                currentAdmin = { id: 1, full_name: 'الإدارة المركزية | MAHAM', email: 'admin@maham.iq', role: 'admin' };
-                const overlay = document.getElementById('admin-auth-guard');
-                if (overlay) {
-                    overlay.classList.add('hidden');
-                    overlay.classList.remove('flex');
-                    overlay.style.display = 'none';
-                }
-                const nameEl = document.getElementById('admin-display-name');
-                if (nameEl) nameEl.textContent = currentAdmin.full_name;
-                toast('تم تسجيل الدخول إلى مركز القيادة الإداري!', 'success');
-                loadAnalytics();
-                return;
-            }
-
             if (errEl) {
                 errEl.textContent = err.message || 'بيانات الدخول الإدارية غير صحيحة.';
                 errEl.classList.remove('hidden');
@@ -222,19 +216,21 @@ const Admin = (() => {
         }
     };
 
-    const toggleMobileSidebar = (forceState) => {
+    const toggleSidebar = (forceState) => {
         const sidebar = document.getElementById('admin-sidebar');
         const backdrop = document.getElementById('admin-sidebar-backdrop');
         if (!sidebar) return;
-        const isHidden = sidebar.classList.contains('hidden');
-        const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
+
+        const isClosed = sidebar.classList.contains('translate-x-full');
+        const shouldOpen = typeof forceState === 'boolean' ? forceState : isClosed;
+
         if (shouldOpen) {
-            sidebar.classList.remove('hidden');
-            sidebar.classList.add('flex');
+            sidebar.classList.remove('translate-x-full');
+            sidebar.classList.add('translate-x-0');
             if (backdrop) backdrop.classList.remove('hidden');
         } else {
-            sidebar.classList.add('hidden');
-            sidebar.classList.remove('flex');
+            sidebar.classList.add('translate-x-full');
+            sidebar.classList.remove('translate-x-0');
             if (backdrop) backdrop.classList.add('hidden');
         }
     };
@@ -244,7 +240,7 @@ const Admin = (() => {
      */
     const switchSection = (sectionId) => {
         if (window.innerWidth < 768) {
-            toggleMobileSidebar(false);
+            toggleSidebar(false);
         }
         const sections = ['overview', 'deposits', 'withdrawals', 'tasks', 'users', 'settings'];
         sections.forEach(s => {
@@ -318,6 +314,8 @@ const Admin = (() => {
             }
 
             tbody.innerHTML = deposits.map(dep => {
+                const userName = dep.user_name || dep.full_name || 'سعد ماهر سعد';
+                const userPhone = dep.user_phone || dep.phone || dep.user_email || '—';
                 const isAsiacell = dep.payment_method === 'asiacell';
                 const methodBadge = isAsiacell ? `
                     <span class="px-2.5 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold text-xs inline-block">
@@ -347,8 +345,8 @@ const Admin = (() => {
                 return `
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
-                        <div>${dep.user_name}</div>
-                        <div class="text-[11px] text-slate-400 font-mono">${dep.user_phone}</div>
+                        <div>${userName}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">${userPhone}</div>
                     </td>
                     <td class="py-3 px-4 text-emerald-400 font-mono font-bold text-sm">
                         ${Number(dep.amount).toLocaleString('en-US')} د.ع
@@ -360,7 +358,7 @@ const Admin = (() => {
                         ${receiptCell}
                     </td>
                     <td class="py-3 px-4 text-slate-400 font-mono text-xs">
-                        ${dep.created_at.substring(0, 16)}
+                        ${dep.created_at ? String(dep.created_at).substring(0, 16).replace('T', ' ') : 'الآن'}
                     </td>
                     <td class="py-3 px-4 text-left">
                         ${dep.status === 'pending' ? `
@@ -453,11 +451,16 @@ const Admin = (() => {
                 return;
             }
 
-            tbody.innerHTML = withdrawals.map(w => `
+            tbody.innerHTML = withdrawals.map(w => {
+                const userName = w.user_name || w.full_name || 'سعد ماهر سعد';
+                const userPhone = w.user_phone || w.phone || w.user_email || '—';
+                const cardNum = w.receiver_account || w.sender_account || w.tx_reference || '—';
+
+                return `
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
-                        <div>${w.user_name}</div>
-                        <div class="text-[11px] text-slate-400 font-mono">${w.user_phone || w.user_email}</div>
+                        <div>${userName}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">${userPhone}</div>
                     </td>
                     <td class="py-3 px-4 text-amber-400 font-mono font-bold text-sm">
                         ${Number(w.amount).toLocaleString('en-US')} د.ع
@@ -467,14 +470,14 @@ const Admin = (() => {
                             ماستر كارد (MasterCard)
                         </span>
                         <div class="mt-1.5 p-2 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between gap-2">
-                            <span class="font-mono font-black text-white text-xs tracking-wider">💳 ${w.receiver_account}</span>
-                            <button type="button" onclick="navigator.clipboard.writeText('${w.receiver_account}'); App.toast('تم نسخ رقم بطاقة الماستر كارد بنجاح', 'success')" class="px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300 text-[10px] font-bold shrink-0">
+                            <span class="font-mono font-black text-white text-xs tracking-wider">💳 ${cardNum}</span>
+                            <button type="button" onclick="navigator.clipboard.writeText('${cardNum}'); App.toast('تم نسخ رقم بطاقة الماستر كارد بنجاح', 'success')" class="px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300 text-[10px] font-bold shrink-0">
                                 نسخ البطاقة
                             </button>
                         </div>
                     </td>
                     <td class="py-3 px-4 text-slate-400 font-mono text-xs">
-                        ${w.created_at.substring(0, 16)}
+                        ${w.created_at ? String(w.created_at).substring(0, 16).replace('T', ' ') : 'الآن'}
                     </td>
                     <td class="py-3 px-4 text-left">
                         ${w.status === 'pending' ? `
@@ -493,7 +496,8 @@ const Admin = (() => {
                         `}
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         } catch (e) {
             App.toast('تعذر جلب طابور السحوبات.', 'error');
         }
@@ -683,7 +687,8 @@ const Admin = (() => {
 
         try {
             const res = await API.get(`admin/users?search=${encodeURIComponent(query)}`);
-            const users = res.data.users || [];
+            const rawUsers = res.data.users || [];
+            const users = rawUsers.filter(u => u.role !== 'admin');
             const tbody = document.getElementById('users-table-tbody');
 
             if (users.length === 0) {
@@ -691,41 +696,50 @@ const Admin = (() => {
                 return;
             }
 
-            tbody.innerHTML = users.map(u => `
+            tbody.innerHTML = users.map(u => {
+                const isActive = !u.status || u.status === 'active';
+                const userPhone = u.phone || u.email || '—';
+                const userBalance = Number(u.balance || 0);
+
+                return `
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
                         <div>${u.full_name}</div>
                         <div class="text-[11px] text-slate-400 font-mono">${u.email}</div>
                     </td>
                     <td class="py-3 px-4 font-mono text-xs text-slate-300">
-                        ${u.phone}
+                        ${userPhone}
                     </td>
                     <td class="py-3 px-4 text-emerald-400 font-mono font-bold text-xs">
-                        ${Number(u.balance).toLocaleString('en-US')} د.ع
+                        ${userBalance.toLocaleString('en-US')} د.ع
                     </td>
                     <td class="py-3 px-4 text-xs font-bold text-amber-400">
                         ${u.active_vip_name || 'الباقة المجانية'}
                     </td>
                     <td class="py-3 px-4 text-center">
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${u.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-                            ${u.status === 'active' ? 'نشط' : 'معلق'}
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
+                            ${isActive ? 'نشط' : 'معلق'}
                         </span>
                     </td>
                     <td class="py-3 px-4 text-left">
                         <div class="flex items-center gap-1.5 justify-end">
+                            <button onclick="Admin.grantUserVipPrompt(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-300 text-xs font-semibold transition" title="منح باقة VIP">
+                                منح VIP ⚡
+                            </button>
                             <button onclick="Admin.assignTaskToUser(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition" title="إسناد مهمة موجهة">
                                 إسناد مهمة
                             </button>
-                            <button onclick="Admin.openBalanceModal(${u.id}, '${u.full_name}', ${u.balance})" class="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition">
+                            <button onclick="Admin.openBalanceModal(${u.id}, '${u.full_name}', ${userBalance})" class="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition">
                                 تعديل الرصيد
                             </button>
-                            <button onclick="Admin.toggleUserStatus(${u.id}, '${u.status === 'active' ? 'suspended' : 'active'}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
-                                ${u.status === 'active' ? 'تجميد' : 'تفعيل'}
+                            <button onclick="Admin.toggleUserStatus(${u.id}, '${isActive ? 'suspended' : 'active'}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                                ${isActive ? 'تجميد' : 'تفعيل'}
                             </button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         } catch (e) {
             App.toast('تعذر جلب سجل المستخدمين.', 'error');
         }
@@ -741,6 +755,50 @@ const Admin = (() => {
             loadUsers();
         } catch (e) {
             App.toast(e.message, 'error');
+        }
+    };
+
+    /**
+     * Grant VIP Subscription to a user directly from Admin Panel
+     */
+    const grantUserVipPrompt = async (userId, userName) => {
+        const choice = prompt(
+            `منح باقة VIP للمستخدم: ${userName}\n\nاختر رقم باقة VIP المراد تفعيلها (لمدة 30 يوماً):\n` +
+            `1: برونزية (VIP 1 - 250 د.ع/يوم)\n` +
+            `2: فضية (VIP 2 - 500 د.ع/يوم)\n` +
+            `3: ذهبية (VIP 3 - 1,000 د.ع/يوم)\n` +
+            `4: بلاتينية (VIP 4 - 2,000 د.ع/يوم)\n` +
+            `5: ماسية (VIP 5 - 4,000 د.ع/يوم)\n\nأدخل الرقم (1 إلى 5):`,
+            '1'
+        );
+
+        if (!choice) return;
+
+        const pkgMap = {
+            '1': 2, // VIP 1 (package_id: 2)
+            '2': 3, // VIP 2 (package_id: 3)
+            '3': 4, // VIP 3 (package_id: 4)
+            '4': 5, // VIP 4 (package_id: 5)
+            '5': 6  // VIP 5 (package_id: 6)
+        };
+
+        const packageId = pkgMap[choice.trim()];
+        if (!packageId) {
+            App.toast('اختيار غير صالح، يرجى إدخال رقم من 1 إلى 5.', 'warning');
+            return;
+        }
+
+        try {
+            const res = await API.post('admin/users/grant-vip', {
+                user_id: userId,
+                package_id: packageId,
+                duration_days: 30
+            });
+            App.toast(res.message, 'success');
+            loadUsers();
+            loadAnalytics();
+        } catch (err) {
+            App.toast(err.message, 'error');
         }
     };
 
@@ -789,14 +847,21 @@ const Admin = (() => {
     const loadSettings = async () => {
         try {
             const res = await API.get('admin/settings');
-            const s = res.data.settings || {};
+            const s = (res.data && res.data.settings) ? res.data.settings : {};
 
-            if (s.zain_cash_number) document.getElementById('set-zain').value = s.zain_cash_number;
-            if (s.asia_hawala_number) document.getElementById('set-asia').value = s.asia_hawala_number;
-            if (s.qi_card_number) document.getElementById('set-qi').value = s.qi_card_number;
-            if (s.official_account_name) document.getElementById('set-name').value = s.official_account_name;
-            if (s.min_deposit_iqd) document.getElementById('set-min-dep').value = s.min_deposit_iqd;
-            if (s.min_withdraw_iqd) document.getElementById('set-min-with').value = s.min_withdraw_iqd;
+            const mcNumEl = document.getElementById('set-mastercard-number');
+            const mcHolderEl = document.getElementById('set-mastercard-holder');
+            const nameEl = document.getElementById('set-name');
+            const asiaInstEl = document.getElementById('set-asiacell-instructions');
+            const minDepEl = document.getElementById('set-min-dep');
+            const minWithEl = document.getElementById('set-min-with');
+
+            if (mcNumEl) mcNumEl.value = s.mastercard_number || '5300 1234 5678 9012';
+            if (mcHolderEl) mcHolderEl.value = s.mastercard_holder || s.official_account_name || 'شركة مهام للخدمات المالية ذ.م.م';
+            if (nameEl) nameEl.value = s.official_account_name || s.mastercard_holder || 'شركة مهام للتكنولوجيا والخدمات المالية ذ.م.م';
+            if (asiaInstEl) asiaInstEl.value = s.asiacell_instructions || 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع (بدون الحاجة لرفع أي صورة إشعار).';
+            if (minDepEl) minDepEl.value = s.min_deposit_iqd || 5000;
+            if (minWithEl) minWithEl.value = s.min_withdraw_iqd || 10000;
         } catch (e) {
             App.toast('تعذر جلب إعدادات المنصة.', 'error');
         }
@@ -805,23 +870,24 @@ const Admin = (() => {
     const handleSettingsSubmit = async (e) => {
         e.preventDefault();
         const payload = {
-            zain_cash_number: document.getElementById('set-zain').value.trim(),
-            asia_hawala_number: document.getElementById('set-asia').value.trim(),
-            qi_card_number: document.getElementById('set-qi').value.trim(),
-            official_account_name: document.getElementById('set-name').value.trim(),
-            min_deposit_iqd: document.getElementById('set-min-dep').value,
-            min_withdraw_iqd: document.getElementById('set-min-with').value
+            mastercard_number: (document.getElementById('set-mastercard-number')?.value || '').trim(),
+            mastercard_holder: (document.getElementById('set-mastercard-holder')?.value || '').trim(),
+            official_account_name: (document.getElementById('set-name')?.value || document.getElementById('set-mastercard-holder')?.value || '').trim(),
+            asiacell_instructions: (document.getElementById('set-asiacell-instructions')?.value || '').trim(),
+            min_deposit_iqd: document.getElementById('set-min-dep')?.value || 5000,
+            min_withdraw_iqd: document.getElementById('set-min-with')?.value || 10000
         };
 
         try {
             const res = await API.post('admin/settings/update', payload);
-            App.toast(res.message, 'success');
+            App.toast(res.message || 'تم حفظ وتحديث الإعدادات بنجاح.', 'success');
         } catch (err) {
-            App.toast(err.message, 'error');
+            App.toast(err.message || 'فشل حفظ الإعدادات.', 'error');
         }
     };
 
     const handleLogout = async () => {
+        API.clearAuthToken();
         try {
             await API.post('auth/logout');
         } catch (e) {}
@@ -833,7 +899,8 @@ const Admin = (() => {
         init,
         initTheme,
         toggleTheme,
-        toggleMobileSidebar,
+        toggleSidebar,
+        toggleMobileSidebar: toggleSidebar,
         handleAdminLogin,
         handleLogout,
         switchSection,
@@ -850,6 +917,8 @@ const Admin = (() => {
         handleCreateTask,
         toggleTaskStatus,
         loadUsers,
+        grantUserVipPrompt,
+        grantVipPrompt: grantUserVipPrompt,
         toggleUserStatus,
         openBalanceModal,
         closeBalanceModal,

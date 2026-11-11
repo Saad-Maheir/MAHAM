@@ -68,7 +68,7 @@ const API = (() => {
                         phone: '07812345678',
                         password: 'User@Maham2026!',
                         role: 'user',
-                        balance: 25000.00,
+                        balance: 0.00,
                         pending_balance: 0.00,
                         free_tasks_used: 0,
                         is_verified: true,
@@ -82,6 +82,17 @@ const API = (() => {
                         created_at: new Date().toISOString()
                     }
                 ]);
+            } else {
+                // Sanitize existing users in localStorage to eliminate any legacy mock balance
+                const existingUsers = getStore('users_db', []);
+                let modified = false;
+                existingUsers.forEach(u => {
+                    if (u.id === 2 && u.balance === 25000.00) {
+                        u.balance = 0.00;
+                        modified = true;
+                    }
+                });
+                if (modified) setStore('users_db', existingUsers);
             }
 
             if (!getStore('tasks_db', null)) {
@@ -145,47 +156,20 @@ const API = (() => {
             }
 
             if (!getStore('transactions_db', null)) {
-                setStore('transactions_db', [
-                    {
-                        id: 1,
-                        tx_uuid: 'TX-INIT-2026',
-                        user_id: 2,
-                        type: 'deposit',
-                        amount: 25000.00,
-                        balance_before: 0.00,
-                        balance_after: 25000.00,
-                        payment_method: 'mastercard',
-                        tx_reference: 'INIT-ALLOC-2026',
-                        status: 'approved',
-                        created_at: new Date(Date.now() - 86400000).toISOString()
-                    },
-                    {
-                        id: 2,
-                        tx_uuid: 'TX-DEP-9941',
-                        user_id: 2,
-                        type: 'deposit',
-                        amount: 10000.00,
-                        balance_before: 25000.00,
-                        balance_after: 25000.00,
-                        payment_method: 'asiacell',
-                        tx_reference: '89451203674812',
-                        status: 'pending',
-                        created_at: new Date(Date.now() - 3600000).toISOString()
-                    },
-                    {
-                        id: 3,
-                        tx_uuid: 'TX-WTH-3312',
-                        user_id: 2,
-                        type: 'withdraw',
-                        amount: 5000.00,
-                        balance_before: 25000.00,
-                        balance_after: 20000.00,
-                        payment_method: 'mastercard',
-                        tx_reference: '5314-8890-4421-9011',
-                        status: 'pending',
-                        created_at: new Date(Date.now() - 1800000).toISOString()
-                    }
-                ]);
+                setStore('transactions_db', []);
+            } else {
+                // Purge any legacy mock transactions from localStorage
+                const existingTxs = getStore('transactions_db', []);
+                const cleanedTxs = existingTxs.filter(t => 
+                    t.tx_reference !== 'INIT-ALLOC-2026' && 
+                    t.tx_uuid !== 'TX-INIT-2026' && 
+                    t.tx_reference !== '89451203674812' && 
+                    t.tx_uuid !== 'TX-DEP-9941' && 
+                    t.tx_uuid !== 'TX-WTH-3312'
+                );
+                if (cleanedTxs.length !== existingTxs.length) {
+                    setStore('transactions_db', cleanedTxs);
+                }
             }
 
             if (!getStore('settings_db', null)) {
@@ -213,7 +197,7 @@ const API = (() => {
                 const found = users.find(u => u.id === uid);
                 if (found) return found;
             }
-            return users.find(u => u.role === 'user') || users[1] || null;
+            return null;
         };
 
         const handle = async (cleanEndpoint, options) => {
@@ -301,16 +285,30 @@ const API = (() => {
             // 2.5 Auth Google One-Click Engine
             if (endpoint === 'auth/google') {
                 const users = getStore('users_db', []);
-                let user = users.find(u => u.role === 'user');
+                const googlePayload = body.google_user || {};
+                const googleEmail = (body.email || googlePayload.email || '').trim().toLowerCase();
+                const googleName = (body.full_name || body.name || googlePayload.name || 'مستخدم Google').trim();
+                const googleSub = body.sub || googlePayload.sub || '';
+                const googleAvatar = body.avatar_url || body.picture || googlePayload.picture || '';
+
+                let user = null;
+                if (googleEmail) {
+                    user = users.find(u => u.email && u.email.toLowerCase() === googleEmail);
+                }
+                if (!user && googleSub) {
+                    user = users.find(u => u.google_id === googleSub);
+                }
+
                 if (!user) {
                     user = {
-                        id: 2,
-                        full_name: 'سعد ماهر سعد',
-                        email: 'saadmaher.dev@gmail.com',
-                        phone: '07812345678',
-                        avatar_url: 'https://lh3.googleusercontent.com/a/ACg8ocISz9mZJ0',
+                        id: Date.now(),
+                        full_name: googleName,
+                        email: googleEmail || `google_${Date.now()}@maham.iq`,
+                        phone: '',
+                        avatar_url: googleAvatar,
+                        google_id: googleSub,
                         role: 'user',
-                        balance: 25000.00,
+                        balance: 0.00,
                         pending_balance: 0.00,
                         free_tasks_used: 0,
                         is_verified: true,
@@ -320,13 +318,21 @@ const API = (() => {
                             daily_profit: 250,
                             task_reward_rate: 250,
                             is_vip: false
-                        }
+                        },
+                        created_at: new Date().toISOString()
                     };
                     users.push(user);
                     setStore('users_db', users);
                 } else {
-                    user.full_name = 'سعد ماهر سعد';
-                    user.avatar_url = user.avatar_url || 'https://lh3.googleusercontent.com/a/ACg8ocISz9mZJ0';
+                    if (googleName && (!user.full_name || user.full_name === 'مستخدم جديد')) {
+                        user.full_name = googleName;
+                    }
+                    if (googleAvatar && !user.avatar_url) {
+                        user.avatar_url = googleAvatar;
+                    }
+                    if (googleSub && !user.google_id) {
+                        user.google_id = googleSub;
+                    }
                     setStore('users_db', users);
                 }
 
@@ -459,17 +465,82 @@ const API = (() => {
                 };
             }
 
-            // 7. Wallet Summary
-            if (endpoint === 'wallet/summary') {
+            // 7. Wallet Balance & Transactions (100% Synced with Admin Settings & DB)
+            if (endpoint === 'wallet/balance' || endpoint === 'wallet/summary') {
                 const user = getActiveUser();
-                const txs = getStore('transactions_db', []).filter(t => !user || t.user_id === user.id);
+                const settings = getStore('settings_db', {});
+                const txs = getStore('transactions_db', []).filter(t => user && Number(t.user_id) === Number(user.id));
+                const totalWithdrawn = txs.filter(t => t.type === 'withdraw' && t.status === 'approved').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+                const totalDeposited = txs.filter(t => t.type === 'deposit' && t.status === 'approved').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+                const mcNumber = settings.mastercard_number || '5300 1234 5678 9012';
+                const mcHolder = settings.mastercard_holder || settings.official_account_name || 'شركة مهام للخدمات المالية ذ.م.م';
+                const asiaInstructions = settings.asiacell_instructions || 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع (بدون الحاجة لرفع أي صورة إشعار).';
+                const minDep = Number(settings.min_deposit_iqd || 5000);
+                const minWith = Number(settings.min_withdraw_iqd || 10000);
+
                 return {
                     success: true,
                     data: {
+                        available_balance: user ? Number(user.balance || 0) : 0,
                         balance: user ? Number(user.balance || 0) : 0,
                         pending_balance: user ? Number(user.pending_balance || 0) : 0,
-                        total_earned: user ? Number(user.balance || 0) : 0,
-                        transactions: txs
+                        total_withdrawn: totalWithdrawn,
+                        total_deposited: totalDeposited,
+                        today_earnings: user ? Number(user.balance || 0) : 0,
+                        mastercard_number: mcNumber,
+                        mastercard_holder: mcHolder,
+                        asiacell_instructions: asiaInstructions,
+                        min_deposit_iqd: minDep,
+                        min_withdraw_iqd: minWith,
+                        min_deposit: minDep,
+                        min_withdraw: minWith,
+                        official_accounts: {
+                            asiacell: {
+                                name: 'آسيا سيل (Asiacell)',
+                                type: 'scratch_card',
+                                title: 'شحن فوري عبر كروت تعبئة آسيا سيل',
+                                account: 'كارت شحن 14 رقماً',
+                                instructions: asiaInstructions,
+                                icon: 'asiacell'
+                            },
+                            mastercard: {
+                                name: 'ماستر كارد (MasterCard)',
+                                type: 'card_transfer',
+                                title: mcHolder,
+                                account: mcNumber,
+                                instructions: 'قم بالتحويل إلى رقم الماستر كارد أعلاه ثم أرفق صورة إشعار التحويل المالي',
+                                icon: 'mastercard'
+                            }
+                        }
+                    }
+                };
+            }
+
+            if (endpoint === 'wallet/transactions') {
+                const user = getActiveUser();
+                const txs = getStore('transactions_db', []).filter(t => user && Number(t.user_id) === Number(user.id));
+                const enriched = txs.map(tx => {
+                    const typeText = tx.type_text || (tx.type === 'deposit' ? 'إيداع رصيد' : tx.type === 'withdraw' ? 'سحب أرباح' : tx.type === 'task_reward' ? 'مكافأة مهمة يومية' : 'اشتراك باقة VIP');
+                    const statusText = tx.status_text || (tx.status === 'approved' ? 'مكتمل ومضاف' : tx.status === 'pending' ? 'قيد التدقيق' : 'مرفوض');
+                    const formattedDate = tx.formatted_date || (tx.created_at ? String(tx.created_at).substring(0, 16).replace('T', ' ') : 'الآن');
+                    const pm = tx.payment_method || 'mastercard';
+                    const pmText = tx.payment_method_text || (pm === 'asiacell' ? 'كارت آسيا سيل' : pm === 'mastercard' ? 'ماستر كارد' : pm === 'system' ? 'النظام' : pm);
+                    return {
+                        ...tx,
+                        type_text: typeText,
+                        status_text: statusText,
+                        formatted_date: formattedDate,
+                        payment_method: pm,
+                        payment_method_text: pmText,
+                        tx_reference: tx.tx_reference || '—',
+                        sender_account: tx.sender_account || tx.tx_reference || '—'
+                    };
+                });
+                return {
+                    success: true,
+                    data: {
+                        transactions: enriched
                     }
                 };
             }
@@ -477,20 +548,27 @@ const API = (() => {
             // 8. Wallet Deposit
             if (endpoint === 'wallet/deposit') {
                 const user = getActiveUser();
+                if (!user) throw new Error('يرجى تسجيل الدخول أولاً لإجراء الإيداع.');
                 const amount = Number(body.amount || 5000);
                 const txs = getStore('transactions_db', []);
 
                 txs.unshift({
                     id: Date.now(),
                     tx_uuid: `TX-DEP-${Date.now()}`,
-                    user_id: user ? user.id : 2,
+                    user_id: user.id,
                     type: 'deposit',
+                    type_text: 'إيداع رصيد',
                     amount: amount,
-                    balance_before: user ? user.balance : 0,
-                    balance_after: user ? user.balance : 0,
+                    balance_before: Number(user.balance || 0),
+                    balance_after: Number(user.balance || 0),
                     payment_method: body.payment_method || 'mastercard',
+                    payment_method_text: body.payment_method === 'asiacell' ? 'كارت آسيا سيل' : 'ماستر كارد',
                     tx_reference: body.tx_reference || `DEP-${Date.now()}`,
+                    sender_account: body.sender_account || body.tx_reference || 'حساب العميل',
+                    receiver_account: body.receiver_account || '',
+                    attachment_url: body.attachment_url || null,
                     status: 'pending',
+                    status_text: 'قيد التدقيق',
                     created_at: new Date().toISOString()
                 });
                 setStore('transactions_db', txs);
@@ -504,31 +582,36 @@ const API = (() => {
             // 9. Wallet Withdraw
             if (endpoint === 'wallet/withdraw') {
                 const user = getActiveUser();
+                if (!user) throw new Error('يرجى تسجيل الدخول أولاً لإجراء السحب.');
                 const amount = Number(body.amount || 5000);
-                if (user && user.balance < amount) {
+                if (Number(user.balance || 0) < amount) {
                     throw new Error('رصيدك المتاح غير كافٍ لإتمام عملية السحب.');
                 }
 
-                if (user) {
-                    user.balance = Number((user.balance - amount).toFixed(2));
-                    const users = getStore('users_db', []);
-                    const idx = users.findIndex(u => u.id === user.id);
-                    if (idx !== -1) users[idx] = user;
-                    setStore('users_db', users);
-                }
+                const prevBalance = Number(user.balance || 0);
+                user.balance = Number((prevBalance - amount).toFixed(2));
+                const users = getStore('users_db', []);
+                const idx = users.findIndex(u => u.id === user.id);
+                if (idx !== -1) users[idx] = user;
+                setStore('users_db', users);
 
                 const txs = getStore('transactions_db', []);
                 txs.unshift({
                     id: Date.now(),
                     tx_uuid: `TX-WTH-${Date.now()}`,
-                    user_id: user ? user.id : 2,
+                    user_id: user.id,
                     type: 'withdraw',
+                    type_text: 'سحب أرباح',
                     amount: amount,
-                    balance_before: user ? user.balance + amount : amount,
-                    balance_after: user ? user.balance : 0,
-                    payment_method: body.payment_method || 'zaincash',
-                    sender_account: body.sender_account || '07800000000',
+                    balance_before: prevBalance,
+                    balance_after: user.balance,
+                    payment_method: body.payment_method || 'mastercard',
+                    payment_method_text: body.payment_method === 'asiacell' ? 'كارت آسيا سيل' : 'ماستر كارد',
+                    sender_account: body.sender_account || body.card_number || 'حساب العميل',
+                    receiver_account: body.receiver_account || body.card_number || 'حساب العميل',
+                    tx_reference: `WTH-${Date.now()}`,
                     status: 'pending',
+                    status_text: 'قيد التدقيق',
                     created_at: new Date().toISOString()
                 });
                 setStore('transactions_db', txs);
@@ -559,30 +642,50 @@ const API = (() => {
             // 11. Subscriptions Subscribe
             if (endpoint === 'subscriptions/subscribe') {
                 const user = getActiveUser();
+                if (!user) throw new Error('يرجى تسجيل الدخول للاشتراك.');
                 const pkgId = Number(body.package_id || 2);
                 const pkgPrices = { 2: 25000, 3: 50000, 4: 100000, 5: 200000, 6: 400000 };
                 const pkgNames = { 2: 'برونزية VIP 1', 3: 'فضية VIP 2', 4: 'ذهبية VIP 3', 5: 'بلاتينية VIP 4', 6: 'ماسية VIP 5' };
                 const pkgProfits = { 2: 250, 3: 500, 4: 1000, 5: 2000, 6: 4000 };
 
                 const price = pkgPrices[pkgId] || 25000;
-                if (user && user.balance < price) {
-                    throw new Error(`رصيدك المتاح (${Number(user.balance).toLocaleString('en-US')} د.ع) غير كافٍ للاشتراك في هذه الباقة (${price.toLocaleString('en-US')} د.ع).`);
+                if (Number(user.balance || 0) < price) {
+                    throw new Error(`رصيدك المتاح (${Number(user.balance || 0).toLocaleString('en-US')} د.ع) غير كافٍ للاشتراك في هذه الباقة (${price.toLocaleString('en-US')} د.ع).`);
                 }
 
-                if (user) {
-                    user.balance = Number((user.balance - price).toFixed(2));
-                    user.tier = {
-                        active_tier_name: pkgNames[pkgId],
-                        active_badge: pkgNames[pkgId],
-                        daily_profit: pkgProfits[pkgId],
-                        task_reward_rate: pkgProfits[pkgId],
-                        is_vip: true
-                    };
-                    const users = getStore('users_db', []);
-                    const idx = users.findIndex(u => u.id === user.id);
-                    if (idx !== -1) users[idx] = user;
-                    setStore('users_db', users);
-                }
+                const prevBalance = Number(user.balance || 0);
+                user.balance = Number((prevBalance - price).toFixed(2));
+                user.tier = {
+                    active_tier_name: pkgNames[pkgId],
+                    active_badge: pkgNames[pkgId],
+                    daily_profit: pkgProfits[pkgId],
+                    task_reward_rate: pkgProfits[pkgId],
+                    is_vip: true
+                };
+                const users = getStore('users_db', []);
+                const idx = users.findIndex(u => u.id === user.id);
+                if (idx !== -1) users[idx] = user;
+                setStore('users_db', users);
+
+                // Add subscription transaction
+                const txs = getStore('transactions_db', []);
+                txs.unshift({
+                    id: Date.now(),
+                    tx_uuid: `TX-SUB-${Date.now()}`,
+                    user_id: user.id,
+                    type: 'subscription_fee',
+                    type_text: 'اشتراك باقة VIP',
+                    amount: price,
+                    balance_before: prevBalance,
+                    balance_after: user.balance,
+                    payment_method: 'system',
+                    payment_method_text: 'النظام',
+                    tx_reference: `اشتراك ${pkgNames[pkgId]}`,
+                    status: 'approved',
+                    status_text: 'مكتمل ومضاف',
+                    created_at: new Date().toISOString()
+                });
+                setStore('transactions_db', txs);
 
                 return {
                     success: true,
@@ -633,12 +736,21 @@ const API = (() => {
                 }
                 
                 deposits = deposits.map(d => {
-                    const u = users.find(usr => usr.id === d.user_id) || {};
+                    const u = users.find(usr => Number(usr.id) === Number(d.user_id)) || {};
+                    const name = u.full_name || d.user_name || 'عميل';
+                    const phone = u.phone || d.user_phone || '—';
+                    const email = u.email || d.user_email || '—';
                     return {
                         ...d,
-                        full_name: u.full_name || 'مستخدم مهام',
-                        email: u.email || 'user@maham.iq',
-                        phone: u.phone || '07800000000'
+                        user_name: name,
+                        full_name: name,
+                        user_phone: phone,
+                        phone: phone,
+                        user_email: email,
+                        email: email,
+                        type_text: 'إيداع رصيد',
+                        status_text: d.status === 'approved' ? 'معتمد' : d.status === 'pending' ? 'قيد التدقيق' : 'مرفوض',
+                        formatted_date: d.created_at ? String(d.created_at).substring(0, 16).replace('T', ' ') : 'الآن'
                     };
                 });
                 return {
@@ -695,13 +807,24 @@ const API = (() => {
                 }
                 
                 withdrawals = withdrawals.map(w => {
-                    const u = users.find(usr => usr.id === w.user_id) || {};
+                    const u = users.find(usr => Number(usr.id) === Number(w.user_id)) || {};
+                    const name = u.full_name || w.user_name || 'عميل';
+                    const phone = u.phone || w.user_phone || '—';
+                    const email = u.email || w.user_email || '—';
+                    const card = w.receiver_account || w.sender_account || w.tx_reference || '—';
                     return {
                         ...w,
-                        full_name: u.full_name || 'مستخدم مهام',
-                        email: u.email || 'user@maham.iq',
-                        phone: u.phone || '07800000000',
-                        card_number: w.tx_reference || '5314-XXXX-XXXX-1234'
+                        user_name: name,
+                        full_name: name,
+                        user_phone: phone,
+                        phone: phone,
+                        user_email: email,
+                        email: email,
+                        receiver_account: card,
+                        card_number: card,
+                        type_text: 'سحب أرباح',
+                        status_text: w.status === 'approved' ? 'تم التحويل والصرف' : w.status === 'pending' ? 'قيد التدقيق' : 'مرفوض',
+                        formatted_date: w.created_at ? String(w.created_at).substring(0, 16).replace('T', ' ') : 'الآن'
                     };
                 });
                 return {
@@ -788,12 +911,20 @@ const API = (() => {
             }
 
             if (endpoint === 'admin/users') {
-                const users = getStore('users_db', []);
+                const users = getStore('users_db', []).filter(u => u.role !== 'admin');
                 const urlParams = new URLSearchParams(cleanEndpoint.split('?')[1] || '');
                 const search = (urlParams.get('search') || '').toLowerCase();
-                let filtered = users;
+                let filtered = users.map(u => ({
+                    ...u,
+                    full_name: u.full_name || 'عميل',
+                    phone: u.phone || '—',
+                    email: u.email || '—',
+                    balance: Number(u.balance || 0),
+                    status: u.status || 'active',
+                    active_vip_name: (u.tier && u.tier.active_tier_name) || 'الباقة الأساسية المجانية'
+                }));
                 if (search) {
-                    filtered = users.filter(u => 
+                    filtered = filtered.filter(u => 
                         (u.full_name && u.full_name.toLowerCase().includes(search)) || 
                         (u.email && u.email.toLowerCase().includes(search)) || 
                         (u.phone && u.phone.includes(search))
@@ -834,10 +965,20 @@ const API = (() => {
 
             // 13. Admin Settings
             if (endpoint === 'admin/settings') {
+                const s = getStore('settings_db', {});
+                if (!s.mastercard_number) {
+                    s.mastercard_number = '5300 1234 5678 9012';
+                    s.mastercard_holder = 'شركة مهام للخدمات المالية ذ.م.م';
+                    s.official_account_name = 'شركة مهام للخدمات المالية ذ.م.م';
+                    s.asiacell_instructions = 'أدخل قيمة الرصيد ورقم كارت الشحن المكون من 14 رقماً ثم اضغط تأكيد الإيداع (بدون الحاجة لرفع أي صورة إشعار).';
+                    s.min_deposit_iqd = 5000;
+                    s.min_withdraw_iqd = 10000;
+                    setStore('settings_db', s);
+                }
                 return {
                     success: true,
                     data: {
-                        settings: getStore('settings_db', {})
+                        settings: s
                     }
                 };
             }

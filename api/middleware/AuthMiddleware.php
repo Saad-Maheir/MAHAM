@@ -20,6 +20,14 @@ class AuthMiddleware {
         if (!$userId) {
             $token = null;
             $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+            if (empty($authHeader) && function_exists('getallheaders')) {
+                $allHeaders = getallheaders();
+                $authHeader = $allHeaders['Authorization'] ?? $allHeaders['authorization'] ?? '';
+            }
+            if (empty($authHeader) && function_exists('apache_request_headers')) {
+                $apacheHeaders = apache_request_headers();
+                $authHeader = $apacheHeaders['Authorization'] ?? $apacheHeaders['authorization'] ?? '';
+            }
             if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
                 $token = $matches[1];
             } elseif (!empty($_COOKIE['maham_remember'])) {
