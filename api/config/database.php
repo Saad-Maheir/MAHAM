@@ -289,15 +289,8 @@ class Database {
                 ('task_timer_seconds', '30', 'مدة عداد مكافحة الاحتيال بالثواني');
             ");
 
-            // 11. Ensure Initial High-Value Tasks exist
-            $pdo->exec("
-                INSERT IGNORE INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `attachment_url`, `target_type`, `target_user_id`, `reward_amount`, `required_seconds`, `min_vip_level`, `is_active`) VALUES
-                (1, 'مشاهدة فيديو ترويجي رسمي لمنصة مهام', 'شاهد العرض التعريفي التوضيحي بالكامل لمدة 30 ثانية لدعم تصنيف المنصة وإضافة الأرباح لمحفظتك.', 'video', 'https://www.youtube.com', 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800', 'all', NULL, 250.00, 30, 0, 1),
-                (2, 'زيارة بوابة الشراكة الرقمية والتقييم', 'زيارة صفحة خدمات الشركاء المعتمدين والاطلاع على أحدث العروض والخدمات المالية المتاحة في العراق.', 'web', 'https://www.google.iq', NULL, 'all', NULL, 250.00, 30, 0, 1),
-                (3, 'متابعة قناة التحديثات الرسمية على تليجرام', 'الانضمام إلى القناة الإخبارية الموثقة للحصول على إشعارات المهام الاستثنائية والمسابقات الأسبوعية.', 'social', 'https://t.me', NULL, 'all', NULL, 250.00, 30, 0, 1),
-                (4, 'استطلاع رأي سريع حول خدمات الدفع الإلكتروني', 'الإجابة على استبيان تقييم تجربة المحافظ الرقمية في السوق العراقي للمساهمة في تحسين الخدمات.', 'survey', 'https://forms.google.com', NULL, 'all', NULL, 250.00, 30, 0, 1),
-                (5, 'زيارة تطبيق محفظة الدفع الشريكة', 'الاطلاع على تفاصيل خدمات التحويل الفوري وحلول تسوية الفواتير المعتمدة للمستخدمين.', 'web', 'https://www.zaincash.iq', NULL, 'all', NULL, 250.00, 30, 0, 1);
-            ");
+            // 11. Tasks catalog is exclusively managed by the Administration (No default dummy tasks)
+            // Tasks will only appear when an administrator explicitly creates them via the Admin Control Panel.
 
             // 12. Ensure Default Central Administrator & Demo Client User exist
             $adminCheck = $pdo->query("SELECT id FROM users WHERE email = 'admin@maham.iq' LIMIT 1");

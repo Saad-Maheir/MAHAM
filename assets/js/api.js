@@ -95,64 +95,10 @@ const API = (() => {
                 if (modified) setStore('users_db', existingUsers);
             }
 
-            if (!getStore('tasks_db', null)) {
-                setStore('tasks_db', [
-                    {
-                        id: 1,
-                        title: 'مشاهدة فيديو ترويجي رسمي لمنصة مهام',
-                        description: 'شاهد العرض التعريفي التوضيحي بالكامل لمدة 30 ثانية لدعم تصنيف المنصة وإضافة الأرباح لمحفظتك.',
-                        category: 'video',
-                        target_url: 'https://www.youtube.com',
-                        attachment_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800',
-                        reward_amount: 250.00,
-                        required_seconds: 30,
-                        is_active: 1
-                    },
-                    {
-                        id: 2,
-                        title: 'زيارة بوابة الشراكة الرقمية والتقييم',
-                        description: 'زيارة صفحة خدمات الشركاء المعتمدين والاطلاع على أحدث العروض والخدمات المالية المتاحة في العراق.',
-                        category: 'web',
-                        target_url: 'https://www.google.iq',
-                        attachment_url: null,
-                        reward_amount: 250.00,
-                        required_seconds: 30,
-                        is_active: 1
-                    },
-                    {
-                        id: 3,
-                        title: 'متابعة قناة التحديثات الرسمية على تليجرام',
-                        description: 'الانضمام إلى القناة الإخبارية الموثقة للحصول على إشعارات المهام الاستثنائية والمسابقات الأسبوعية.',
-                        category: 'social',
-                        target_url: 'https://t.me',
-                        attachment_url: null,
-                        reward_amount: 250.00,
-                        required_seconds: 30,
-                        is_active: 1
-                    },
-                    {
-                        id: 4,
-                        title: 'استطلاع رأي سريع حول خدمات الدفع الإلكتروني',
-                        description: 'الإجابة على استبيان تقييم تجربة المحافظ الرقمية في السوق العراقي للمساهمة في تحسين الخدمات.',
-                        category: 'survey',
-                        target_url: 'https://forms.google.com',
-                        attachment_url: null,
-                        reward_amount: 250.00,
-                        required_seconds: 30,
-                        is_active: 1
-                    },
-                    {
-                        id: 5,
-                        title: 'زيارة تطبيق محفظة الدفع الشريكة',
-                        description: 'الاطلاع على تفاصيل خدمات التحويل الفوري وحلول تسوية الفواتير المعتمدة للمستخدمين.',
-                        category: 'web',
-                        target_url: 'https://www.zaincash.iq',
-                        attachment_url: null,
-                        reward_amount: 250.00,
-                        required_seconds: 30,
-                        is_active: 1
-                    }
-                ]);
+            // Tasks Catalog starts empty by default - only tasks created by Admin appear
+            const storedTasks = getStore('tasks_db', null);
+            if (!storedTasks || (Array.isArray(storedTasks) && storedTasks.some(t => t.id === 1 && String(t.title || '').includes('مشاهدة فيديو')))) {
+                setStore('tasks_db', []);
             }
 
             if (!getStore('transactions_db', null)) {
@@ -408,17 +354,41 @@ const API = (() => {
                 };
             }
 
-            // 4. Tasks List
+            // 4. Tasks List (Strict user isolation & admin-assigned tasks only)
             if (endpoint === 'tasks/list') {
-                const tasks = getStore('tasks_db', []);
+                const allTasks = getStore('tasks_db', []);
                 const user = getActiveUser();
+                const userId = user ? Number(user.id) : 0;
+                const isVip = Boolean(user && user.tier && user.tier.is_vip);
+                const freeUsed = Number(user ? (user.free_tasks_used || 0) : 0);
+                const freeLimit = 5;
+                const freeRemaining = Math.max(0, freeLimit - freeUsed);
+
+                // Filter tasks: must be active and either general or targeted to this user
+                const filteredTasks = allTasks.filter(t => {
+                    if (t.is_active === 0 || t.is_active === false) return false;
+                    if (t.target_type === 'specific') {
+                        return Number(t.target_user_id) === userId;
+                    }
+                    return t.target_type === 'all' || !t.target_type;
+                });
+
                 return {
                     success: true,
                     data: {
-                        tasks: tasks,
-                        cooldown_active: false,
-                        cooldown_remaining_seconds: 0,
-                        tasks_remaining_today: user ? Math.max(0, 5 - (user.free_tasks_used || 0)) : 5
+                        tasks: filteredTasks,
+                        user_state: {
+                            is_vip: isVip,
+                            active_subscriptions_count: isVip ? 1 : 0,
+                            active_package: isVip ? (user.tier.active_badge || 'باقة VIP') : 'الباقة الأساسية المجانية',
+                            current_reward_per_task: isVip ? (user.tier.daily_profit || 250) : 250,
+                            free_tasks_used: freeUsed,
+                            free_tasks_remaining: isVip ? '∞' : freeRemaining,
+                            tasks_display: isVip ? '∞' : String(freeRemaining),
+                            cooldown_remaining_seconds: 0,
+                            can_execute_task: isVip ? true : (freeRemaining > 0),
+                            completed_task_ids_today: []
+                        }
                     }
                 };
             }

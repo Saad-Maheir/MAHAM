@@ -231,15 +231,9 @@ INSERT INTO `app_settings` (`setting_key`, `setting_value`, `description`) VALUE
 ('task_timer_seconds', '30', 'مدة عداد مكافحة الاحتيال بالثواني');
 
 -- =============================================================================
--- SEED DATA: INITIAL HIGH-VALUE TASKS
+-- TASKS CATALOG: EXCLUSIVELY MANAGED BY ADMIN
+-- No default dummy tasks. Tasks are populated dynamically via Admin Panel.
 -- =============================================================================
-
-INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `attachment_url`, `target_type`, `target_user_id`, `reward_amount`, `required_seconds`, `min_vip_level`, `is_active`) VALUES
-(1, 'مشاهدة فيديو ترويجي رسمي لمنصة مهام', 'شاهد العرض التعريفي التوضيحي بالكامل لمدة 30 ثانية لدعم تصنيف المنصة وإضافة الأرباح لمحفظتك.', 'video', 'https://www.youtube.com', 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800', 'all', NULL, 250.00, 30, 0, 1),
-(2, 'زيارة بوابة الشراكة الرقمية والتقييم', 'زيارة صفحة خدمات الشركاء المعتمدين والاطلاع على أحدث العروض والخدمات المالية المتاحة في العراق.', 'web', 'https://www.google.iq', NULL, 'all', NULL, 250.00, 30, 0, 1),
-(3, 'متابعة قناة التحديثات الرسمية على تليجرام', 'الانضمام إلى القناة الإخبارية الموثقة للحصول على إشعارات المهام الاستثنائية والمسابقات الأسبوعية.', 'social', 'https://t.me', NULL, 'all', NULL, 250.00, 30, 0, 1),
-(4, 'استطلاع رأي سريع حول خدمات الدفع الإلكتروني', 'الإجابة على استبيان تقييم تجربة المحافظ الرقمية في السوق العراقي للمساهمة في تحسين الخدمات.', 'survey', 'https://forms.google.com', NULL, 'all', NULL, 250.00, 30, 0, 1),
-(5, 'زيارة تطبيق محفظة الدفع الشريكة', 'الاطلاع على تفاصيل خدمات التحويل الفوري وحلول تسوية الفواتير المعتمدة للمستخدمين.', 'web', 'https://www.zaincash.iq', NULL, 'all', NULL, 250.00, 30, 0, 1);
 
 -- =============================================================================
 -- SEED DATA: INITIAL ADMIN USER FOR PHASE 2 EXPANSION
@@ -248,5 +242,5 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `category`, `target_url`, `at
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `balance`, `pending_balance`, `free_tasks_used`, `is_verified`, `status`) VALUES
 (1, 'الإدارة المركزية | MAHAM', 'admin@maham.iq', '07800000000', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'admin', 0.00, 0.00, 0, 1, 'active'),
-(2, 'سعد ماهر سعد (حساب تجريبي)', 'user@maham.iq', '07812345678', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'user', 25000.00, 0.00, 0, 1, 'active');
+(2, 'سعد ماهر سعد (حساب تجريبي)', 'user@maham.iq', '07812345678', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGPEWiSDe.6C4rU7u', 'user', 0.00, 0.00, 0, 1, 'active');
 
