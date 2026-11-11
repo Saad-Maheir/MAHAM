@@ -765,14 +765,17 @@ const Admin = (() => {
 
             tbody.innerHTML = users.map(u => {
                 const isActive = !u.status || u.status === 'active';
-                const userPhone = u.phone || u.email || '—';
+                const userPhone = u.phone && u.phone !== 'null' ? u.phone : (u.google_id ? '<span class="text-sky-400 font-sans text-[11px] font-semibold">Google OAuth</span>' : '—');
                 const userBalance = Number(u.balance || 0);
 
                 return `
                 <tr class="border-b border-slate-800/80 hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-bold text-white">
-                        <div>${u.full_name}</div>
-                        <div class="text-[11px] text-slate-400 font-mono">${u.email}</div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono text-[11px] font-bold">#${u.id}</span>
+                            <span>${u.full_name}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-mono mt-0.5">${u.email}</div>
                     </td>
                     <td class="py-3 px-4 font-mono text-xs text-slate-300">
                         ${userPhone}
@@ -796,8 +799,12 @@ const Admin = (() => {
                                 </svg>
                                 <span>ترقية VIP</span>
                             </button>
-                            <button onclick="Admin.assignTaskToUser(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition" title="إسناد مهمة موجهة">
-                                إسناد مهمة
+                            <button onclick="Admin.assignTaskToUser(${u.id}, '${u.full_name}')" class="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition flex items-center gap-1" title="إسناد مهمة موجهة">
+                                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 8v8m-4-4h8"/>
+                                </svg>
+                                <span>إسناد مهمة</span>
                             </button>
                             <button onclick="Admin.openBalanceModal(${u.id}, '${u.full_name}', ${userBalance})" class="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition">
                                 تعديل الرصيد

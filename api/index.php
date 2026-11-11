@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Support JSON payload parsing for POST requests
-$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+$contentType = strtolower($_SERVER['CONTENT_TYPE'] ?? '');
 if (str_contains($contentType, 'application/json')) {
     $rawInput = file_get_contents('php://input');
     $decoded = json_decode($rawInput, true);

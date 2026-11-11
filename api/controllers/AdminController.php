@@ -452,6 +452,12 @@ class AdminController {
     public static function createTask(): void {
         $admin = AuthMiddleware::requireAdmin();
 
+        $rawInput = file_get_contents('php://input');
+        $jsonPayload = json_decode($rawInput, true);
+        if (is_array($jsonPayload)) {
+            $_POST = array_merge($_POST, $jsonPayload);
+        }
+
         $title         = Validator::sanitize($_POST['title'] ?? '');
         $description   = Validator::sanitize($_POST['description'] ?? '');
         $category      = Validator::sanitize($_POST['category'] ?? 'video');
@@ -513,6 +519,13 @@ class AdminController {
      */
     public static function updateTask(): void {
         $admin  = AuthMiddleware::requireAdmin();
+
+        $rawInput = file_get_contents('php://input');
+        $jsonPayload = json_decode($rawInput, true);
+        if (is_array($jsonPayload)) {
+            $_POST = array_merge($_POST, $jsonPayload);
+        }
+
         $taskId = (int)($_POST['task_id'] ?? 0);
 
         if ($taskId <= 0) {
@@ -528,12 +541,16 @@ class AdminController {
             Response::success('تم تغيير حالة تفعيل المهمة بنجاح.');
         }
 
-        $title        = Validator::sanitize($_POST['title'] ?? '');
-        $description  = Validator::sanitize($_POST['description'] ?? '');
-        $targetUrl    = filter_var(trim((string)($_POST['target_url'] ?? '')), FILTER_VALIDATE_URL);
-        $rewardAmount = (float)($_POST['reward_amount'] ?? 250);
-        $requiredSec  = (int)($_POST['required_seconds'] ?? 30);
-        $isActive     = (int)($_POST['is_active'] ?? 1);
+        $title         = Validator::sanitize($_POST['title'] ?? '');
+        $description   = Validator::sanitize($_POST['description'] ?? '');
+        $category      = Validator::sanitize($_POST['category'] ?? 'video');
+        $targetUrl     = filter_var(trim((string)($_POST['target_url'] ?? '')), FILTER_VALIDATE_URL);
+        $attachmentUrl = !empty($_POST['attachment_url']) ? filter_var(trim((string)$_POST['attachment_url']), FILTER_VALIDATE_URL) ?: null : null;
+        $targetType    = in_array($_POST['target_type'] ?? 'all', ['all', 'specific'], true) ? $_POST['target_type'] : 'all';
+        $targetUserId  = ($targetType === 'specific' && !empty($_POST['target_user_id'])) ? (int)$_POST['target_user_id'] : null;
+        $rewardAmount  = (float)($_POST['reward_amount'] ?? 250);
+        $requiredSec   = (int)($_POST['required_seconds'] ?? 30);
+        $isActive      = (int)($_POST['is_active'] ?? 1);
 
         if (mb_strlen($title) < 5 || !$targetUrl) {
             Response::error('يرجى ملء بيانات المهمة بشكل صحيح.');
@@ -541,18 +558,23 @@ class AdminController {
 
         $stmt = $pdo->prepare("
             UPDATE tasks 
-            SET title = :title, description = :desc, target_url = :url, 
+            SET title = :title, description = :desc, category = :cat, target_url = :url, 
+                attachment_url = :attach, target_type = :target_type, target_user_id = :target_user,
                 reward_amount = :reward, required_seconds = :seconds, is_active = :active
             WHERE id = :id
         ");
         $stmt->execute([
-            'title'   => $title,
-            'desc'    => $description,
-            'url'     => $targetUrl,
-            'reward'  => $rewardAmount,
-            'seconds' => max(30, $requiredSec),
-            'active'  => $isActive,
-            'id'      => $taskId
+            'title'       => $title,
+            'desc'        => $description,
+            'cat'         => $category,
+            'url'         => $targetUrl,
+            'attach'      => $attachmentUrl,
+            'target_type' => $targetType,
+            'target_user' => $targetUserId,
+            'reward'      => $rewardAmount,
+            'seconds'     => max(30, $requiredSec),
+            'active'      => $isActive,
+            'id'          => $taskId
         ]);
 
         Response::success('تم تحديث بيانات المهمة بنجاح.');
@@ -583,7 +605,13 @@ class AdminController {
 
         $params = [];
         if (!empty($search)) {
-            $query .= " AND (u.full_name LIKE :s1 OR u.email LIKE :s2 OR u.phone LIKE :s3)";
+            $cleanSearch = ltrim($search, '#');
+            if (is_numeric($cleanSearch)) {
+                $query .= " AND (u.id = :s_id OR u.full_name LIKE :s1 OR u.email LIKE :s2 OR u.phone LIKE :s3)";
+                $params['s_id'] = (int)$cleanSearch;
+            } else {
+                $query .= " AND (u.full_name LIKE :s1 OR u.email LIKE :s2 OR u.phone LIKE :s3)";
+            }
             $params['s1'] = "%{$search}%";
             $params['s2'] = "%{$search}%";
             $params['s3'] = "%{$search}%";

@@ -860,14 +860,28 @@ const API = (() => {
             }
 
             if (endpoint === 'admin/tasks') {
+                const tasks = getStore('tasks_db', []);
+                const users = getStore('users_db', []);
+                const enriched = tasks.map(t => {
+                    const u = t.target_user_id ? users.find(usr => Number(usr.id) === Number(t.target_user_id)) : null;
+                    return {
+                        ...t,
+                        target_user_name: u ? u.full_name : (t.target_user_name || null),
+                        completions_count: t.completions_count || 0
+                    };
+                });
                 return {
                     success: true,
-                    data: { tasks: getStore('tasks_db', []) }
+                    data: { tasks: enriched }
                 };
             }
 
             if (endpoint === 'admin/tasks/create') {
                 const tasks = getStore('tasks_db', []);
+                const users = getStore('users_db', []);
+                const targetUserId = body.target_user_id ? Number(body.target_user_id) : null;
+                const targetUser = targetUserId ? users.find(u => Number(u.id) === targetUserId) : null;
+
                 const newTask = {
                     id: tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
                     title: body.title || 'مهمة جديدة',
@@ -876,22 +890,35 @@ const API = (() => {
                     required_seconds: Number(body.required_seconds) || 30,
                     target_url: body.target_url || 'https://google.com',
                     attachment_url: body.attachment_url || null,
+                    target_type: body.target_type || 'all',
+                    target_user_id: targetUserId,
+                    target_user_name: targetUser ? targetUser.full_name : null,
                     description: body.description || '',
-                    is_active: body.is_active !== undefined ? body.is_active : 1
+                    is_active: body.is_active !== undefined ? body.is_active : 1,
+                    completions_count: 0
                 };
                 tasks.push(newTask);
                 setStore('tasks_db', tasks);
                 return {
                     success: true,
-                    message: 'تم إضافة المهمة الجديدة بنجاح.'
+                    message: 'تم إضافة المهمة بنجاح وتوجيهها للمستهدفين.'
                 };
             }
 
             if (endpoint === 'admin/tasks/update') {
                 const tasks = getStore('tasks_db', []);
+                const users = getStore('users_db', []);
                 const idx = tasks.findIndex(t => t.id === Number(body.task_id));
                 if (idx !== -1) {
-                    Object.assign(tasks[idx], body);
+                    if (body.toggle_status) {
+                        tasks[idx].is_active = tasks[idx].is_active ? 0 : 1;
+                    } else {
+                        Object.assign(tasks[idx], body);
+                        if (body.target_user_id) {
+                            const u = users.find(usr => Number(usr.id) === Number(body.target_user_id));
+                            if (u) tasks[idx].target_user_name = u.full_name;
+                        }
+                    }
                     setStore('tasks_db', tasks);
                 }
                 return {
@@ -903,7 +930,10 @@ const API = (() => {
             if (endpoint === 'admin/users') {
                 const users = getStore('users_db', []).filter(u => u.role !== 'admin');
                 const urlParams = new URLSearchParams(cleanEndpoint.split('?')[1] || '');
-                const search = (urlParams.get('search') || '').toLowerCase();
+                const rawSearch = (urlParams.get('search') || '').trim();
+                const search = rawSearch.toLowerCase();
+                const cleanSearch = rawSearch.replace('#', '').trim();
+
                 let filtered = users.map(u => ({
                     ...u,
                     full_name: u.full_name || 'عميل',
@@ -915,6 +945,7 @@ const API = (() => {
                 }));
                 if (search) {
                     filtered = filtered.filter(u => 
+                        (cleanSearch && String(u.id) === cleanSearch) ||
                         (u.full_name && u.full_name.toLowerCase().includes(search)) || 
                         (u.email && u.email.toLowerCase().includes(search)) || 
                         (u.phone && u.phone.includes(search))
